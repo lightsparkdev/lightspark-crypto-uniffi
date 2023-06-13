@@ -1,0 +1,50 @@
+namespace lightspark_crypto {
+};
+
+[Error]
+enum LightsparkSignerError {
+  "Bip32Error",
+  "TweakMustHaveBoth",
+  "KeyTweakError",
+  "EntropyLengthError",
+};
+
+interface Mnemonic {
+    constructor();
+
+    [Name="from_entropy", Throws=LightsparkSignerError]
+    constructor(sequence<u8> entropy);
+
+    [Name="from_phrase", Throws=LightsparkSignerError]
+    constructor(string phrase);
+
+    string as_string();
+};
+
+interface Seed {
+    constructor(sequence<u8> seed);
+
+    [Name="from_mnemonic"]
+    constructor([ByRef] Mnemonic mnemonic);
+
+    sequence<u8> as_bytes();
+};
+
+interface LightsparkSigner {
+    constructor();
+
+    [Throws=LightsparkSignerError]
+    string derive_public_key([ByRef] Seed seed, string derivation_path);
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> ecdh([ByRef] Seed seed, string derivation_path, string public_key);
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> derive_key_and_sign(
+        [ByRef] Seed seed,
+        sequence<u8> message,
+        string derivation_path,
+        sequence<u8>? add_tweak,
+        sequence<u8>? mul_tweak
+    );
+};

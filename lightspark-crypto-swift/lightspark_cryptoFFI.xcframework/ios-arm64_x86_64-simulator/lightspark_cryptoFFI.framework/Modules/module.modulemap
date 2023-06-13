@@ -1,0 +1,6 @@
+framework module lightspark_cryptoFFI {
+  umbrella header "lightspark_cryptoFFI-umbrella.h"
+
+  export *
+  module * { export * }
+}
