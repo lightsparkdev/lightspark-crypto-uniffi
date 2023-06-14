@@ -69,7 +69,7 @@ jobs:
         run: |
           rm lightspark-cryptoFFI.xcframework.zip || true
           zip -9 -r lightspark-cryptoFFI.xcframework.zip lightspark-crypto-swift/lightspark_cryptoFFI.xcframework
-          echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum bdkFFI.xcframework.zip`" >> $GITHUB_ENV
+          echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`" >> $GITHUB_ENV
           echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
 
       - name: Update Wallet SDK
@@ -77,6 +77,7 @@ jobs:
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
+          ls
           sed "s/LIGHTSPARKCRYPTOFFICHECKSUM/${LIGHTSPARKCRYPTOFFICHECKSUM}/;s/LIGHTSPARKCRYPTOFFIURL/${LIGHTSPARKCRYPTOFFIURL}/" Package.swift.txt > ../../swift/Package.swift
           cp lightspark_crypto.swift ../../swift/Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           cd ../../swift
