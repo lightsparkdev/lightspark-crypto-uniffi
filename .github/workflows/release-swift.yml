@@ -16,7 +16,6 @@ jobs:
       - name: Checkout swift repo
         uses: actions/checkout@v3
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
           repository: ${{ github.repository_owner }}/swift-wallet-sdk
           path: swift
 
@@ -75,6 +74,8 @@ jobs:
 
       - name: Update Wallet SDK
         working-directory: build/lightspark-crypto-swift
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
