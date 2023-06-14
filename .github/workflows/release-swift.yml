@@ -83,10 +83,11 @@ jobs:
           sed "s/LIGHTSPARKCRYPTOFFICHECKSUM/${LIGHTSPARKCRYPTOFFICHECKSUM}/;s/LIGHTSPARKCRYPTOFFIURL/${LIGHTSPARKCRYPTOFFIURL}/" Package.swift.txt > ../../swift/Package.swift
           cp lightspark_crypto.swift ../../swift/Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           cd ../../swift
+          git checkout -b update-crypto-lib
           git add Package.swift
           git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           git commit -m "Update crypto library."
-          git push
+          git push origin update-crypto-lib
 
       - name: Create release
         uses: ncipollo/release-action@v1
