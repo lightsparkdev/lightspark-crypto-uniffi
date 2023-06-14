@@ -1,6 +1,7 @@
 name: "Release Swift Library"
 on: 
   workflow_dispatch:
+  push:
 
 jobs:
   build-publish:
