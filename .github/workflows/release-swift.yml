@@ -1,0 +1,26 @@
+name: "Release Swift Library"
+on: 
+  workflow_dispatch:
+
+jobs:
+  build-publish:
+    name: Build, tag and create swift library
+    runs-on: macos-12
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          path: build
+          
+      - name: Checkout swift repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository_owner }}/swift-wallet-sdk
+          path: swift
+          
+      - name: Install Rust targets
+        working-directory: build
+        run: |
+          rustup target add aarch64-apple-ios x86_64-apple-ios
+          rustup target add aarch64-apple-ios-sim
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
