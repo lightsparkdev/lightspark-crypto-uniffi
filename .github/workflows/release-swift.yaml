@@ -1,4 +1,4 @@
-name: Release Swift Library
+name: "Release Swift Library"
 on: 
   workflow_dispatch:
 
