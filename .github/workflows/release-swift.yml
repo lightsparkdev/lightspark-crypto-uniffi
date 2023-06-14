@@ -16,6 +16,7 @@ jobs:
       - name: Checkout swift repo
         uses: actions/checkout@v3
         with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
           repository: ${{ github.repository_owner }}/swift-wallet-sdk
           path: swift
 
@@ -25,7 +26,7 @@ jobs:
       #     rustup target add aarch64-apple-ios x86_64-apple-ios
       #     rustup target add aarch64-apple-ios-sim
       #     rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      #
+
       # - name: Run uniffi bindgen
       #   working-directory: build
       #   run: |
