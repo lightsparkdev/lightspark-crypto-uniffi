@@ -69,6 +69,21 @@ jobs:
         run: |
           rm lightspark-cryptoFFI.xcframework.zip || true
           zip -9 -r lightspark-cryptoFFI.xcframework.zip lightspark-crypto-swift/lightspark_cryptoFFI.xcframework
+          echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum bdkFFI.xcframework.zip`" >> $GITHUB_ENV
+          echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
+
+      - name: Update Wallet SDK
+        working-directory: build/lightspark-crypto-swift
+        run: |
+          echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
+          echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
+          sed "s/LIGHTSPARKCRYPTOFFICHECKSUM/${LIGHTSPARKCRYPTOFFICHECKSUM}/;s/LIGHTSPARKCRYPTOFFIURL/${LIGHTSPARKCRYPTOFFIURL}/" Package.swift.txt > ../../swift/Package.swift
+          cp lightspark_crypto.swift ../../swift/Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
+          cd ../../swift
+          git add Package.swift
+          git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
+          git commit -m "Update crypto library."
+          git push
 
       - name: Create release
         uses: ncipollo/release-action@v1
