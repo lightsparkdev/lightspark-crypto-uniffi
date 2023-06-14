@@ -72,15 +72,24 @@ jobs:
           echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`" >> $GITHUB_ENV
           echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
 
+      - name: Generate a token
+        id: generate_token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Update Wallet SDK
         working-directory: build/lightspark-crypto-swift
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
-          ls
           sed "s/LIGHTSPARKCRYPTOFFICHECKSUM/${LIGHTSPARKCRYPTOFFICHECKSUM}/;s/LIGHTSPARKCRYPTOFFIURL/${LIGHTSPARKCRYPTOFFIURL}/" Package.swift.txt > ../../swift/Package.swift
           cp lightspark_crypto.swift ../../swift/Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           cd ../../swift
+          git config --global user.name 'Lightspark Eng'
+          git config --global user.email 'engineering@lightspark.com'
+          echo "https://x-access-token:${TOKEN}@github.com" > ~/.git-credentials
           git checkout -b update-crypto-lib
           git add Package.swift
           git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
