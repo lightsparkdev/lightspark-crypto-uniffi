@@ -16,8 +16,6 @@ jobs:
       - name: Checkout swift repo
         uses: actions/checkout@v3
         with:
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository_owner }}/swift-wallet-sdk
           path: swift
 
