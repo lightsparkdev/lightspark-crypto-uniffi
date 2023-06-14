@@ -27,37 +27,37 @@ jobs:
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Run uniffi bindgen
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language swift --out-dir lightspark-crypto-swift
 
       - name: Build for x86_64-apple-darwin
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo build --profile release --target x86_64-apple-darwin
 
       - name: Build for aarch64-apple-darwin
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo build --profile release --target aarch64-apple-darwin
 
       - name: Build for x86_64-apple-ios
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo build --profile release --target x86_64-apple-ios
 
       - name: Build for aarch64-apple-ios
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo build --profile release --target aarch64-apple-ios
 
       - name: Build for aarch64-apple-ios-sim
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cargo build --profile release --target aarch64-apple-ios-sim
 
       - name: Combine binaries
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           mkdir -p target/lipo-ios-sim/release
           lipo target/aarch64-apple-ios-sim/release/liblightspark_crypto.a target/x86_64-apple-ios/release/liblightspark_crypto.a -create -output target/lipo-ios-sim/release/liblightspark_crypto.a
@@ -65,7 +65,7 @@ jobs:
           lipo target/aarch64-apple-darwin/release/liblightspark_crypto.a target/x86_64-apple-darwin/release/liblightspark_crypto.a -create -output target/lipo-macos/release/liblightspark_crypto.a
 
       - name: Setup xcframework
-        working-directory: build/lightspark-crypto-uniffi
+        working-directory: build
         run: |
           cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
           cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
