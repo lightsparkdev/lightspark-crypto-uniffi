@@ -13,6 +13,13 @@ jobs:
         with:
           path: build
 
+      - name: Checkout swift repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository_owner }}/swift-wallet-sdk
+          token: "${{ secrets.ACCESS_TOKEN }}"
+          path: swift
+
       # - name: Install Rust targets
       #   working-directory: build
       #   run: |
@@ -66,12 +73,8 @@ jobs:
           echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`"
           echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`" >> $GITHUB_ENV
           echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
-          
+                  
       - name: Update Wallet SDK
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ github.repository_owner }}/swift-wallet-sdk
-          path: swift
         working-directory: build/lightspark-crypto-swift
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
@@ -81,7 +84,6 @@ jobs:
           cd ../../swift
           git config --global user.name 'Lightspark Eng'
           git config --global user.email 'engineering@lightspark.com'
-          echo "https://x-access-token:${TOKEN}@github.com" > ~/.git-credentials
           git add Package.swift
           git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           git commit -m "Update crypto library."
