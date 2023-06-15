@@ -69,6 +69,7 @@ jobs:
         run: |
           rm lightspark-cryptoFFI.xcframework.zip || true
           zip -9 -r lightspark-cryptoFFI.xcframework.zip lightspark-crypto-swift/lightspark_cryptoFFI.xcframework
+          echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`"
           echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`" >> $GITHUB_ENV
           echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
 
@@ -85,11 +86,9 @@ jobs:
           git config --global user.name 'Lightspark Eng'
           git config --global user.email 'engineering@lightspark.com'
           echo "https://x-access-token:${TOKEN}@github.com" > ~/.git-credentials
-          git checkout -b update-crypto-lib
           git add Package.swift
           git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           git commit -m "Update crypto library."
-          git push origin update-crypto-lib
 
       - name: Create release
         uses: ncipollo/release-action@v1
