@@ -13,12 +13,6 @@ jobs:
         with:
           path: build
 
-      - name: Checkout swift repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ github.repository_owner }}/swift-wallet-sdk
-          path: swift
-
       # - name: Install Rust targets
       #   working-directory: build
       #   run: |
@@ -73,19 +67,12 @@ jobs:
           echo "LIGHTSPARKCRYPTOFFICHECKSUM=`swift package compute-checksum lightspark-cryptoFFI.xcframework.zip`" >> $GITHUB_ENV
           echo "LIGHTSPARKCRYPTOFFIURL=https\:\/\/github\.com\/${{ github.repository_owner }}\/lightspark\-crypto\-uniffi\/releases\/download\/test\/lightspark\-cryptoFFI\.xcframework\.zip" >> $GITHUB_ENV
           
-      - name: GitHub App token
-        id: generate_token
-        uses: tibdex/github-app-token@v1.7.0
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
-          repository: lightsparkdev/swift-wallet-sdk
-        
-
       - name: Update Wallet SDK
+        uses: actions/checkout@v3
+          with:
+            repository: ${{ github.repository_owner }}/swift-wallet-sdk
+            path: swift
         working-directory: build/lightspark-crypto-swift
-        env:
-          TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
