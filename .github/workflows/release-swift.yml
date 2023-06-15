@@ -69,9 +69,9 @@ jobs:
           
       - name: Update Wallet SDK
         uses: actions/checkout@v3
-          with:
-            repository: ${{ github.repository_owner }}/swift-wallet-sdk
-            path: swift
+        with:
+          repository: ${{ github.repository_owner }}/swift-wallet-sdk
+          path: swift
         working-directory: build/lightspark-crypto-swift
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
