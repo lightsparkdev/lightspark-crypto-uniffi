@@ -77,7 +77,7 @@ jobs:
       - name: Update Wallet SDK
         working-directory: build/lightspark-crypto-swift
         env:
-          TOKEN: ${{ stepssecrets.ACCESS_TOKEN }}
+          TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
