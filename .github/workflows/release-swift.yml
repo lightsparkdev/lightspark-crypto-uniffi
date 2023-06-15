@@ -76,6 +76,8 @@ jobs:
                   
       - name: Update Wallet SDK
         working-directory: build/lightspark-crypto-swift
+        env:
+          TOKEN: ${{ stepssecrets.ACCESS_TOKEN }}
         run: |
           echo checksum = ${{ env.LIGHTSPARKCRYPTOFFICHECKSUM }}
           echo url = ${{ env.LIGHTSPARKCRYPTOFFIURL }}
@@ -84,6 +86,7 @@ jobs:
           cd ../../swift
           git config --global user.name 'Lightspark Eng'
           git config --global user.email 'engineering@lightspark.com'
+          echo "https://x-access-token:${TOKEN}@github.com" > ~/.git-credentials
           git add Package.swift
           git add Sources/LightsparkWallet/Crypto/LightsparkCrypto.swift
           git commit -m "Update crypto library."
