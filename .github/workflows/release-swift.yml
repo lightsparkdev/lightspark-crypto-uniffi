@@ -80,5 +80,5 @@ jobs:
           artifacts: "build/lightspark-cryptoFFI.xcframework.zip"
           tag: ${{ inputs.version }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: "Test Release"
+          name: ${{ inputs.version }}
           prerelease: true
