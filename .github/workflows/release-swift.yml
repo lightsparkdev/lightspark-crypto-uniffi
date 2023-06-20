@@ -65,6 +65,12 @@ jobs:
       - name: Setup xcframework
         working-directory: build
         run: |
+          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
+          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
+          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
+          cp target/aarch64-apple-ios/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+          cp target/lipo-ios-sim/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+          cp target/lipo-macos/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
           rm lightspark-cryptoFFI.xcframework.zip || true
           zip -9 -r lightspark-cryptoFFI.xcframework.zip lightspark-crypto-swift/lightspark_cryptoFFI.xcframework
 
