@@ -1,0 +1,6 @@
+version: 3
+
+project:
+  id: lightspark/lightspark-crypto-uniffi
+  name: lightspark-crypto-uniffi
+  url: https://github.com/lightsparkdev/lightspark-crypto-uniffi
