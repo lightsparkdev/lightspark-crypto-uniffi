@@ -44,7 +44,7 @@ open class RustBuffer : Structure() {
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_ba88_rustbuffer_alloc(size, status).also {
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_83f5_rustbuffer_alloc(size, status).also {
                 if (it.data == null) {
                     throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=$size)")
                 }
@@ -52,7 +52,7 @@ open class RustBuffer : Structure() {
         }
 
         internal fun free(buf: RustBuffer.ByValue) = rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_ba88_rustbuffer_free(buf, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_83f5_rustbuffer_free(buf, status)
         }
     }
 
@@ -264,38 +264,67 @@ internal interface _UniFFILib : Library {
         }
     }
 
-    fun ffi_lightspark_crypto_ba88_Seed_object_free(
+    fun ffi_lightspark_crypto_83f5_Mnemonic_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_ba88_Seed_new(
-        `seed`: RustBuffer.ByValue,
+    fun lightspark_crypto_83f5_Mnemonic_new(
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_ba88_Seed_as_bytes(
+    fun lightspark_crypto_83f5_Mnemonic_from_entropy(
+        `entropy`: RustBuffer.ByValue,
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
+
+    fun lightspark_crypto_83f5_Mnemonic_from_phrase(
+        `phrase`: RustBuffer.ByValue,
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
+
+    fun lightspark_crypto_83f5_Mnemonic_as_string(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_ba88_LightsparkSigner_object_free(
+    fun ffi_lightspark_crypto_83f5_Seed_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_ba88_LightsparkSigner_new(
+    fun lightspark_crypto_83f5_Seed_new(
+        `seed`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_ba88_LightsparkSigner_derive_public_key(
+    fun lightspark_crypto_83f5_Seed_from_mnemonic(
+        `mnemonic`: Pointer,
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
+
+    fun lightspark_crypto_83f5_Seed_as_bytes(
+        `ptr`: Pointer,
+        _uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_lightspark_crypto_83f5_LightsparkSigner_object_free(
+        `ptr`: Pointer,
+        _uniffi_out_err: RustCallStatus,
+    ): Unit
+
+    fun lightspark_crypto_83f5_LightsparkSigner_new(
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
+
+    fun lightspark_crypto_83f5_LightsparkSigner_derive_public_key(
         `ptr`: Pointer,
         `seed`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_ba88_LightsparkSigner_ecdh(
+    fun lightspark_crypto_83f5_LightsparkSigner_ecdh(
         `ptr`: Pointer,
         `seed`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
@@ -303,7 +332,7 @@ internal interface _UniFFILib : Library {
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_ba88_LightsparkSigner_derive_key_and_sign(
+    fun lightspark_crypto_83f5_LightsparkSigner_derive_key_and_sign(
         `ptr`: Pointer,
         `seed`: Pointer,
         `message`: RustBuffer.ByValue,
@@ -313,22 +342,22 @@ internal interface _UniFFILib : Library {
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_ba88_rustbuffer_alloc(
+    fun ffi_lightspark_crypto_83f5_rustbuffer_alloc(
         `size`: Int,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_ba88_rustbuffer_from_bytes(
+    fun ffi_lightspark_crypto_83f5_rustbuffer_from_bytes(
         `bytes`: ForeignBytes.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_ba88_rustbuffer_free(
+    fun ffi_lightspark_crypto_83f5_rustbuffer_free(
         `buf`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun ffi_lightspark_crypto_ba88_rustbuffer_reserve(
+    fun ffi_lightspark_crypto_83f5_rustbuffer_reserve(
         `buf`: RustBuffer.ByValue,
         `additional`: Int,
         _uniffi_out_err: RustCallStatus,
@@ -583,7 +612,7 @@ class LightsparkSigner(
     constructor() :
         this(
             rustCall() { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_LightsparkSigner_new(_status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_LightsparkSigner_new(_status)
             },
         )
 
@@ -597,7 +626,7 @@ class LightsparkSigner(
      */
     protected override fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_ba88_LightsparkSigner_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_83f5_LightsparkSigner_object_free(this.pointer, status)
         }
     }
 
@@ -607,7 +636,7 @@ class LightsparkSigner(
     override fun `derivePublicKey`(`seed`: Seed, `derivationPath`: String): String =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_LightsparkSigner_derive_public_key(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterString.lower(`derivationPath`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_LightsparkSigner_derive_public_key(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterString.lower(`derivationPath`), _status)
             }
         }.let {
             FfiConverterString.lift(it)
@@ -619,7 +648,7 @@ class LightsparkSigner(
     override fun `ecdh`(`seed`: Seed, `derivationPath`: String, `publicKey`: String): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_LightsparkSigner_ecdh(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterString.lower(`derivationPath`), FfiConverterString.lower(`publicKey`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_LightsparkSigner_ecdh(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterString.lower(`derivationPath`), FfiConverterString.lower(`publicKey`), _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -631,7 +660,7 @@ class LightsparkSigner(
     override fun `deriveKeyAndSign`(`seed`: Seed, `message`: List<UByte>, `derivationPath`: String, `addTweak`: List<UByte>?, `mulTweak`: List<UByte>?): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_LightsparkSigner_derive_key_and_sign(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterSequenceUByte.lower(`message`), FfiConverterString.lower(`derivationPath`), FfiConverterOptionalSequenceUByte.lower(`addTweak`), FfiConverterOptionalSequenceUByte.lower(`mulTweak`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_LightsparkSigner_derive_key_and_sign(it, FfiConverterTypeSeed.lower(`seed`), FfiConverterSequenceUByte.lower(`message`), FfiConverterString.lower(`derivationPath`), FfiConverterOptionalSequenceUByte.lower(`addTweak`), FfiConverterOptionalSequenceUByte.lower(`mulTweak`), _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -660,18 +689,18 @@ public object FfiConverterTypeLightsparkSigner : FfiConverter<LightsparkSigner, 
     }
 }
 
-public interface SeedInterface {
+public interface MnemonicInterface {
 
-    fun `asBytes`(): List<UByte>
+    fun `asString`(): String
 }
 
-class Seed(
+class Mnemonic(
     pointer: Pointer,
-) : FFIObject(pointer), SeedInterface {
-    constructor(`seed`: List<UByte>) :
+) : FFIObject(pointer), MnemonicInterface {
+    constructor() :
         this(
             rustCall() { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_Seed_new(FfiConverterSequenceUByte.lower(`seed`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_Mnemonic_new(_status)
             },
         )
 
@@ -685,18 +714,103 @@ class Seed(
      */
     protected override fun freeRustArcPtr() {
         rustCall() { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_ba88_Seed_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_83f5_Mnemonic_object_free(this.pointer, status)
+        }
+    }
+
+    override fun `asString`(): String =
+        callWithPointer {
+            rustCall() { _status ->
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_Mnemonic_as_string(it, _status)
+            }
+        }.let {
+            FfiConverterString.lift(it)
+        }
+
+    companion object {
+        fun `fromEntropy`(`entropy`: List<UByte>): Mnemonic =
+            Mnemonic(
+                rustCallWithError(LightsparkSignerException) { _status ->
+                    _UniFFILib.INSTANCE.lightspark_crypto_83f5_Mnemonic_from_entropy(FfiConverterSequenceUByte.lower(`entropy`), _status)
+                },
+            )
+        fun `fromPhrase`(`phrase`: String): Mnemonic =
+            Mnemonic(
+                rustCallWithError(LightsparkSignerException) { _status ->
+                    _UniFFILib.INSTANCE.lightspark_crypto_83f5_Mnemonic_from_phrase(FfiConverterString.lower(`phrase`), _status)
+                },
+            )
+    }
+}
+
+public object FfiConverterTypeMnemonic : FfiConverter<Mnemonic, Pointer> {
+    override fun lower(value: Mnemonic): Pointer = value.callWithPointer { it }
+
+    override fun lift(value: Pointer): Mnemonic {
+        return Mnemonic(value)
+    }
+
+    override fun read(buf: ByteBuffer): Mnemonic {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(Pointer(buf.getLong()))
+    }
+
+    override fun allocationSize(value: Mnemonic) = 8
+
+    override fun write(value: Mnemonic, buf: ByteBuffer) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+public interface SeedInterface {
+
+    fun `asBytes`(): List<UByte>
+}
+
+class Seed(
+    pointer: Pointer,
+) : FFIObject(pointer), SeedInterface {
+    constructor(`seed`: List<UByte>) :
+        this(
+            rustCall() { _status ->
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_Seed_new(FfiConverterSequenceUByte.lower(`seed`), _status)
+            },
+        )
+
+    /**
+     * Disconnect the object from the underlying Rust object.
+     *
+     * It can be called more than once, but once called, interacting with the object
+     * causes an `IllegalStateException`.
+     *
+     * Clients **must** call this method once done with the object, or cause a memory leak.
+     */
+    protected override fun freeRustArcPtr() {
+        rustCall() { status ->
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_83f5_Seed_object_free(this.pointer, status)
         }
     }
 
     override fun `asBytes`(): List<UByte> =
         callWithPointer {
             rustCall() { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_ba88_Seed_as_bytes(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_83f5_Seed_as_bytes(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
         }
+
+    companion object {
+        fun `fromMnemonic`(`mnemonic`: Mnemonic): Seed =
+            Seed(
+                rustCall() { _status ->
+                    _UniFFILib.INSTANCE.lightspark_crypto_83f5_Seed_from_mnemonic(FfiConverterTypeMnemonic.lower(`mnemonic`), _status)
+                },
+            )
+    }
 }
 
 public object FfiConverterTypeSeed : FfiConverter<Seed, Pointer> {
@@ -727,6 +841,7 @@ sealed class LightsparkSignerException(message: String) : Exception(message) {
     class Bip32Exception(message: String) : LightsparkSignerException(message)
     class TweakMustHaveBoth(message: String) : LightsparkSignerException(message)
     class KeyTweakException(message: String) : LightsparkSignerException(message)
+    class EntropyLengthException(message: String) : LightsparkSignerException(message)
 
     companion object ErrorHandler : CallStatusErrorHandler<LightsparkSignerException> {
         override fun lift(error_buf: RustBuffer.ByValue): LightsparkSignerException = FfiConverterTypeLightsparkSignerError.lift(error_buf)
@@ -739,6 +854,7 @@ public object FfiConverterTypeLightsparkSignerError : FfiConverterRustBuffer<Lig
             1 -> LightsparkSignerException.Bip32Exception(FfiConverterString.read(buf))
             2 -> LightsparkSignerException.TweakMustHaveBoth(FfiConverterString.read(buf))
             3 -> LightsparkSignerException.KeyTweakException(FfiConverterString.read(buf))
+            4 -> LightsparkSignerException.EntropyLengthException(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -759,6 +875,10 @@ public object FfiConverterTypeLightsparkSignerError : FfiConverterRustBuffer<Lig
             }
             is LightsparkSignerException.KeyTweakException -> {
                 buf.putInt(3)
+                Unit
+            }
+            is LightsparkSignerException.EntropyLengthException -> {
+                buf.putInt(4)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
