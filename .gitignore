@@ -15,3 +15,6 @@ lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/*/lightspark_cryptoFFI.
 !lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/*/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI-umbrella.h
 !lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/*/lightspark_cryptoFFI.framework/Modules
 !lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/*/lightspark_cryptoFFI.framework/Modules/module.modulemap
+
+lightspark-crypto-kotlin/jniLibs
+.idea/
