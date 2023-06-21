@@ -7,8 +7,10 @@ use k256::{
     NonZeroScalar, Secp256k1,
 };
 use rand_core::OsRng;
+use wasm_bindgen::{JsError, JsValue};
+use wasm_bindgen::prelude::*;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum LightsparkSignerError {
     Bip32Error(bip32::Error),
     TweakMustHaveBoth,
@@ -29,18 +31,26 @@ impl fmt::Display for LightsparkSignerError {
 
 impl std::error::Error for LightsparkSignerError {}
 
+impl Into<JsValue> for LightsparkSignerError {
+    fn into(self) -> JsValue {
+        JsError::from(self).into()
+    }
+}
+
+#[wasm_bindgen]
 #[derive(Clone)]
 pub struct Mnemonic {
     internal: bip32::Mnemonic,
 }
 
+#[wasm_bindgen]
 impl Mnemonic {
     pub fn new() -> Self {
         let internal = bip32::Mnemonic::random(&mut OsRng, Default::default());
         Self { internal }
     }
 
-    pub fn from_entropy(entropy: Vec<u8>) -> Result<Self, LightsparkSignerError> {
+    pub fn from_entropy(entropy: Vec<u8>) -> Result<Mnemonic, LightsparkSignerError> {
         let slice = entropy.as_slice();
         let array: [u8; 32] = slice
             .try_into()
@@ -49,7 +59,7 @@ impl Mnemonic {
         Ok(Self { internal })
     }
 
-    pub fn from_phrase(phrase: String) -> Result<Self, LightsparkSignerError> {
+    pub fn from_phrase(phrase: String) -> Result<Mnemonic, LightsparkSignerError> {
         let internal = bip32::Mnemonic::new(phrase, Default::default())
             .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         Ok(Self { internal })
@@ -60,11 +70,13 @@ impl Mnemonic {
     }
 }
 
+#[wasm_bindgen]
 #[derive(Clone)]
 pub struct Seed {
     seed: Vec<u8>,
 }
 
+#[wasm_bindgen]
 impl Seed {
     pub fn from_mnemonic(mnemonic: &Mnemonic) -> Self {
         let seed = mnemonic.internal.to_seed("").as_bytes().to_vec();
@@ -80,8 +92,10 @@ impl Seed {
     }
 }
 
+#[wasm_bindgen]
 pub struct LightsparkSigner;
 
+#[wasm_bindgen]
 impl LightsparkSigner {
     pub fn new() -> Self {
         Self {}
