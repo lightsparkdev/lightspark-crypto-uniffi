@@ -83,3 +83,6 @@ copy-jvm-libs:
 	cp -r target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64/libuniffi_lightspark_crypto.dylib
 
 build-jvm: setup-jvm-targets build-jvm-targets copy-jvm-libs
+
+build-wasm:
+	wasm-pack build
