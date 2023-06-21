@@ -16,6 +16,7 @@ code-gen-swift:
 
 code-gen-kotlin:
 	cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language kotlin --out-dir lightspark-crypto-kotlin
+	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
 build-apple-targets:
 	cargo build --profile release --target x86_64-apple-darwin
@@ -70,7 +71,7 @@ copy-android-libs:
 	cp -r target/armv7-linux-androideabi/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/android/armeabi-v7a/libuniffi_lightspark_crypto.so
 	cp -r target/x86_64-linux-android/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/android/x86_64/libuniffi_lightspark_crypto.so
 
-build-android: setup-android-targets build-android-arm64 build-android-x86 build-android-arm7 copy-android-libs
+build-android: setup-android-targets code-gen-kotlin build-android-arm64 build-android-x86 build-android-arm7 copy-android-libs
 
 build-jvm-targets:
 	cargo build --profile release-smaller --target aarch64-apple-darwin

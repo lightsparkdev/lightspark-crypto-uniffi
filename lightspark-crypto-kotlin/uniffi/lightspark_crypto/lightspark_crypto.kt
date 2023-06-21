@@ -3,7 +3,7 @@
 
 @file:Suppress("NAME_SHADOWING")
 
-package uniffi.lightspark_crypto
+package com.lightspark.sdk.crypto.internal
 
 // Common helper code.
 //
