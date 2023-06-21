@@ -95,8 +95,13 @@ impl Seed {
 #[wasm_bindgen]
 pub struct LightsparkSigner;
 
+#[wasm_bindgen]
 impl LightsparkSigner {
-    fn derive_public_key_internal(
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn derive_public_key(
         &self,
         seed: &Seed,
         derivation_path: String,
@@ -108,7 +113,7 @@ impl LightsparkSigner {
         Ok(public_key.to_string(Prefix::XPUB))
     }
 
-    fn derive_key_and_sign_internal(
+    pub fn derive_key_and_sign(
         &self,
         seed: &Seed,
         message: Vec<u8>,
@@ -124,7 +129,7 @@ impl LightsparkSigner {
         Ok(signature.to_bytes().to_vec())
     }
 
-    fn ecdh_internal(
+    pub fn ecdh(
         &self,
         seed: &Seed,
         derivation_path: String,
@@ -205,77 +210,6 @@ impl LightsparkSigner {
         } else {
             return Err(LightsparkSignerError::KeyTweakError);
         }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl LightsparkSigner {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn derive_public_key(
-        &self,
-        seed: &Seed,
-        derivation_path: String,
-    ) -> Result<String, LightsparkSignerError> {
-        self.derive_public_key_internal(seed, derivation_path)
-    }
-
-    pub fn derive_key_and_sign(
-        &self,
-        seed: &Seed,
-        message: Vec<u8>,
-        derivation_path: String,
-        add_tweak: Option<Vec<u8>>,
-        mul_tweak: Option<Vec<u8>>,
-    ) -> Result<Vec<u8>, LightsparkSignerError> {
-        self.derive_key_and_sign_internal(seed, message, derivation_path, add_tweak, mul_tweak)
-    }
-
-    pub fn ecdh(
-        &self,
-        seed: &Seed,
-        derivation_path: String,
-        public_key: String,
-    ) -> Result<Vec<u8>, LightsparkSignerError> {
-        self.ecdh_internal(seed, derivation_path, public_key)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-impl LightsparkSigner {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn derive_public_key(
-        &self,
-        seed: &Seed,
-        derivation_path: String,
-    ) -> Result<String, JsError> {
-        self.derive_public_key_internal(seed, derivation_path).map_err(|e| JsError::from(e))
-    }
-
-    pub fn derive_key_and_sign(
-        &self,
-        seed: &Seed,
-        message: Vec<u8>,
-        derivation_path: String,
-        add_tweak: Option<Vec<u8>>,
-        mul_tweak: Option<Vec<u8>>,
-    ) -> Result<Vec<u8>, JsError> {
-        self.derive_key_and_sign_internal(seed, message, derivation_path, add_tweak, mul_tweak).map_err(|e| JsError::from(e))
-    }
-
-    pub fn ecdh(
-        &self,
-        seed: &Seed,
-        derivation_path: String,
-        public_key: String,
-    ) -> Result<Vec<u8>, JsError> {
-        self.ecdh_internal(seed, derivation_path, public_key).map_err(|e| JsError::from(e))
     }
 }
 
