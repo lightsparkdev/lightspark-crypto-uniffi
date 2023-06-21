@@ -10,19 +10,18 @@ use rand_core::OsRng;
 use wasm_bindgen::{JsError, JsValue};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum LightsparkSignerError {
-    Bip32Error = 0,
-    TweakMustHaveBoth = 1,
-    KeyTweakError = 2,
-    EntropyLengthError = 3,
+    Bip32Error(bip32::Error),
+    TweakMustHaveBoth,
+    KeyTweakError,
+    EntropyLengthError,
 }
 
 impl fmt::Display for LightsparkSignerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Bip32Error => write!(f, "Bip32 error"),
+            Self::Bip32Error(err) => write!(f, "Bip32 error {}", err),
             Self::TweakMustHaveBoth => write!(f, "Both tweaks must be present"),
             Self::KeyTweakError => write!(f, "Key tweak error"),
             Self::EntropyLengthError => write!(f, "Entropy must be 32 bytes"),
@@ -62,7 +61,7 @@ impl Mnemonic {
 
     pub fn from_phrase(phrase: String) -> Result<Mnemonic, LightsparkSignerError> {
         let internal = bip32::Mnemonic::new(phrase, Default::default())
-            .map_err(|e| LightsparkSignerError::Bip32Error)?;
+            .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         Ok(Self { internal })
     }
 
@@ -96,25 +95,20 @@ impl Seed {
 #[wasm_bindgen]
 pub struct LightsparkSigner;
 
-#[wasm_bindgen]
 impl LightsparkSigner {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn derive_public_key(
+    fn derive_public_key_internal(
         &self,
         seed: &Seed,
         derivation_path: String,
     ) -> Result<String, LightsparkSignerError> {
         let xprv = self
             .derive_key(seed, derivation_path)
-            .map_err(|e| LightsparkSignerError::Bip32Error)?;
+            .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         let public_key = xprv.public_key();
         Ok(public_key.to_string(Prefix::XPUB))
     }
 
-    pub fn derive_key_and_sign(
+    fn derive_key_and_sign_internal(
         &self,
         seed: &Seed,
         message: Vec<u8>,
@@ -130,7 +124,7 @@ impl LightsparkSigner {
         Ok(signature.to_bytes().to_vec())
     }
 
-    pub fn ecdh(
+    fn ecdh_internal(
         &self,
         seed: &Seed,
         derivation_path: String,
@@ -138,10 +132,10 @@ impl LightsparkSigner {
     ) -> Result<Vec<u8>, LightsparkSignerError> {
         let xprv = self
             .derive_key(seed, derivation_path)
-            .map_err(|e| LightsparkSignerError::Bip32Error)?;
+            .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         let secret_key = xprv.private_key().as_nonzero_scalar();
         let public_key =
-            XPub::from_str(&public_key).map_err(|e| LightsparkSignerError::Bip32Error)?;
+            XPub::from_str(&public_key).map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         let shared_secret = ecdh::diffie_hellman(secret_key, public_key.public_key().as_affine());
         Ok(shared_secret.raw_secret_bytes().to_vec())
     }
@@ -155,7 +149,7 @@ impl LightsparkSigner {
     ) -> Result<k256::ecdsa::SigningKey, LightsparkSignerError> {
         let xprv = self
             .derive_key(seed, derivation_path)
-            .map_err(|e| LightsparkSignerError::Bip32Error)?;
+            .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         //unwrap add_tweak and mul_tweak
         if add_tweak.is_some() && mul_tweak.is_some() {
             let private_key_scalar = xprv.private_key().as_nonzero_scalar();
@@ -211,6 +205,77 @@ impl LightsparkSigner {
         } else {
             return Err(LightsparkSignerError::KeyTweakError);
         }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl LightsparkSigner {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn derive_public_key(
+        &self,
+        seed: &Seed,
+        derivation_path: String,
+    ) -> Result<String, LightsparkSignerError> {
+        self.derive_public_key_internal(seed, derivation_path)
+    }
+
+    pub fn derive_key_and_sign(
+        &self,
+        seed: &Seed,
+        message: Vec<u8>,
+        derivation_path: String,
+        add_tweak: Option<Vec<u8>>,
+        mul_tweak: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>, LightsparkSignerError> {
+        self.derive_key_and_sign_internal(seed, message, derivation_path, add_tweak, mul_tweak)
+    }
+
+    pub fn ecdh(
+        &self,
+        seed: &Seed,
+        derivation_path: String,
+        public_key: String,
+    ) -> Result<Vec<u8>, LightsparkSignerError> {
+        self.ecdh_internal(seed, derivation_path, public_key)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl LightsparkSigner {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn derive_public_key(
+        &self,
+        seed: &Seed,
+        derivation_path: String,
+    ) -> Result<String, JsError> {
+        self.derive_public_key_internal(seed, derivation_path).map_err(|e| JsError::from(e))
+    }
+
+    pub fn derive_key_and_sign(
+        &self,
+        seed: &Seed,
+        message: Vec<u8>,
+        derivation_path: String,
+        add_tweak: Option<Vec<u8>>,
+        mul_tweak: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>, JsError> {
+        self.derive_key_and_sign_internal(seed, message, derivation_path, add_tweak, mul_tweak).map_err(|e| JsError::from(e))
+    }
+
+    pub fn ecdh(
+        &self,
+        seed: &Seed,
+        derivation_path: String,
+        public_key: String,
+    ) -> Result<Vec<u8>, JsError> {
+        self.ecdh_internal(seed, derivation_path, public_key).map_err(|e| JsError::from(e))
     }
 }
 
