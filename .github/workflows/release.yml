@@ -20,7 +20,7 @@ jobs:
       - name: Build and package swift
         working-directory: build
         run: |
-          make build-swift -j2
+          make build-swift -j4
 
       - name: Setup xcframework
         working-directory: build
@@ -51,12 +51,12 @@ jobs:
       - name: Build for Android
         working-directory: build
         run: |
-          make build-android
+          make build-android -j4
 
       - name: Build JVM
         working-directory: build
         run: |
-          make build-jvm
+          make build-jvm -j2
 
       - name: Setup artifact
         working-directory: build

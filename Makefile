@@ -25,13 +25,13 @@ build-apple-targets:
 	cargo build --profile release --target aarch64-apple-ios
 	cargo build --profile release --target aarch64-apple-ios-sim
 
-combine-swift-binaries:
+combine-swift-binaries: build-apple-targets
 	mkdir -p target/lipo-ios-sim/release
 	lipo target/aarch64-apple-ios-sim/release/liblightspark_crypto.a target/x86_64-apple-ios/release/liblightspark_crypto.a -create -output target/lipo-ios-sim/release/liblightspark_crypto.a
 	mkdir -p target/lipo-macos/release
 	lipo target/aarch64-apple-darwin/release/liblightspark_crypto.a target/x86_64-apple-darwin/release/liblightspark_crypto.a -create -output target/lipo-macos/release/liblightspark_crypto.a
 
-setup-xcframework:
+setup-xcframework: combine-swift-binaries
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
@@ -63,7 +63,7 @@ build-android-arm7: android_abi = armv7a-linux-androideabi
 build-android-arm7:
 	cargo build --profile release-smaller --target=armv7-linux-androideabi
 
-copy-android-libs:
+android-libs: build-android-arm64 build-android-x86 build-android-arm7
 	mkdir -p lightspark-crypto-kotlin/jniLibs/android/arm64-v8a
 	mkdir -p lightspark-crypto-kotlin/jniLibs/android/armeabi-v7a
 	mkdir -p lightspark-crypto-kotlin/jniLibs/android/x86_64
@@ -71,19 +71,19 @@ copy-android-libs:
 	cp -r target/armv7-linux-androideabi/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/android/armeabi-v7a/libuniffi_lightspark_crypto.so
 	cp -r target/x86_64-linux-android/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/android/x86_64/libuniffi_lightspark_crypto.so
 
-build-android: setup-android-targets code-gen-kotlin build-android-arm64 build-android-x86 build-android-arm7 copy-android-libs
+build-android: setup-android-targets code-gen-kotlin android-libs
 
 build-jvm-targets:
 	cargo build --profile release-smaller --target aarch64-apple-darwin
 	cargo build --profile release-smaller --target x86_64-apple-darwin
 
-copy-jvm-libs:
+jvm-libs: build-jvm-targets
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64
 	cp -r target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64/libuniffi_lightspark_crypto.dylib
 	cp -r target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64/libuniffi_lightspark_crypto.dylib
 
-build-jvm: setup-jvm-targets build-jvm-targets copy-jvm-libs
+build-jvm: setup-jvm-targets jvm-libs
 
 build-wasm:
 	wasm-pack build --profile release-smaller --scope lightsparkdev
