@@ -86,4 +86,4 @@ copy-jvm-libs:
 build-jvm: setup-jvm-targets build-jvm-targets copy-jvm-libs
 
 build-wasm:
-	wasm-pack build
+	wasm-pack build --profile release-smaller --scope lightsparkdev

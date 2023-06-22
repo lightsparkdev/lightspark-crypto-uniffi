@@ -17,60 +17,14 @@ jobs:
         with:
           path: build
 
-      - name: Install Rust targets
+      - name: Build and package swift
         working-directory: build
         run: |
-          rustup target add aarch64-apple-ios x86_64-apple-ios
-          rustup target add aarch64-apple-ios-sim
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
-
-      - name: Run uniffi bindgen
-        working-directory: build
-        run: |
-          cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language swift --out-dir lightspark-crypto-swift
-
-      - name: Build for x86_64-apple-darwin
-        working-directory: build
-        run: |
-          cargo build --profile release --target x86_64-apple-darwin
-
-      - name: Build for aarch64-apple-darwin
-        working-directory: build
-        run: |
-          cargo build --profile release --target aarch64-apple-darwin
-
-      - name: Build for x86_64-apple-ios
-        working-directory: build
-        run: |
-          cargo build --profile release --target x86_64-apple-ios
-
-      - name: Build for aarch64-apple-ios
-        working-directory: build
-        run: |
-          cargo build --profile release --target aarch64-apple-ios
-
-      - name: Build for aarch64-apple-ios-sim
-        working-directory: build
-        run: |
-          cargo build --profile release --target aarch64-apple-ios-sim
-
-      - name: Combine binaries
-        working-directory: build
-        run: |
-          mkdir -p target/lipo-ios-sim/release
-          lipo target/aarch64-apple-ios-sim/release/liblightspark_crypto.a target/x86_64-apple-ios/release/liblightspark_crypto.a -create -output target/lipo-ios-sim/release/liblightspark_crypto.a
-          mkdir -p target/lipo-macos/release
-          lipo target/aarch64-apple-darwin/release/liblightspark_crypto.a target/x86_64-apple-darwin/release/liblightspark_crypto.a -create -output target/lipo-macos/release/liblightspark_crypto.a
+          make build-swift -j2
 
       - name: Setup xcframework
         working-directory: build
         run: |
-          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
-          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
-          cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
-          cp target/aarch64-apple-ios/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
-          cp target/lipo-ios-sim/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
-          cp target/lipo-macos/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
           rm lightspark-cryptoFFI.xcframework.zip || true
           zip -9 -r lightspark-cryptoFFI.xcframework.zip lightspark-crypto-swift/lightspark_cryptoFFI.xcframework
       - name: Upload xcframework artifact
@@ -97,18 +51,18 @@ jobs:
       - name: Build for Android
         working-directory: build
         run: |
-          make build-android
+          make build-android -j2
 
       - name: Build JVM
         working-directory: build
         run: |
-          make build-jvm
+          make build-jvm -j2
 
       - name: Setup artifact
         working-directory: build
         run: |
           zip -9 -r lightspark-cryptoFFI-kotlin.zip lightspark-crypto-kotlin/
-      - name: Upload xcframework artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: "lightspark-cryptoFFI-kotlin"
@@ -130,7 +84,7 @@ jobs:
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: build
+          artifacts: "build/lightspark-cryptoFFI*"
           tag: ${{ inputs.version }}
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ inputs.version }}
