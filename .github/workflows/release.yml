@@ -51,12 +51,12 @@ jobs:
       - name: Build for Android
         working-directory: build
         run: |
-          make build-android -j2
+          make build-android
 
       - name: Build JVM
         working-directory: build
         run: |
-          make build-jvm -j2
+          make build-jvm
 
       - name: Setup artifact
         working-directory: build
