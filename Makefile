@@ -73,7 +73,7 @@ android-libs: build-android-arm64 build-android-x86 build-android-arm7
 
 build-android: setup-android-targets code-gen-kotlin android-libs
 
-build-jvm-targets:
+build-jvm-targets: setup-jvm-targets
 	cargo build --profile release-smaller --target aarch64-apple-darwin
 	cargo build --profile release-smaller --target x86_64-apple-darwin
 
