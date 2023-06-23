@@ -81,6 +81,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lightspark-cryptoFFI-kotlin
+      - name: Debug Stuff
+        run: |
+          pwd
+          ls -a
+          ls -a lightspark-crypto-uniffi
+          ls -a lightspark-crypto-uniffi/lightspark-crypto-uniffi
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
