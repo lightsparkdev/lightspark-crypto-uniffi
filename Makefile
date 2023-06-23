@@ -19,25 +19,25 @@ code-gen-kotlin:
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
 build-apple-targets:
-	cargo build --profile release --target x86_64-apple-darwin
-	cargo build --profile release --target aarch64-apple-darwin
-	cargo build --profile release --target x86_64-apple-ios
-	cargo build --profile release --target aarch64-apple-ios
-	cargo build --profile release --target aarch64-apple-ios-sim
+	cargo build --profile release-smaller --target x86_64-apple-darwin
+	cargo build --profile release-smaller --target aarch64-apple-darwin
+	cargo build --profile release-smaller --target x86_64-apple-ios
+	cargo build --profile release-smaller --target aarch64-apple-ios
+	cargo build --profile release-smaller --target aarch64-apple-ios-sim
 
 combine-swift-binaries: build-apple-targets
 	mkdir -p target/lipo-ios-sim/release
-	lipo target/aarch64-apple-ios-sim/release/liblightspark_crypto.a target/x86_64-apple-ios/release/liblightspark_crypto.a -create -output target/lipo-ios-sim/release/liblightspark_crypto.a
+	lipo target/aarch64-apple-ios-sim/release-smaller/liblightspark_crypto.a target/x86_64-apple-ios/release-smaller/liblightspark_crypto.a -create -output target/lipo-ios-sim/release-smaller/liblightspark_crypto.a
 	mkdir -p target/lipo-macos/release
-	lipo target/aarch64-apple-darwin/release/liblightspark_crypto.a target/x86_64-apple-darwin/release/liblightspark_crypto.a -create -output target/lipo-macos/release/liblightspark_crypto.a
+	lipo target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.a target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.a -create -output target/lipo-macos/release-smaller/liblightspark_crypto.a
 
 setup-xcframework: combine-swift-binaries
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
 	cp lightspark-crypto-swift/lightspark_cryptoFFI.h lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/Headers/lightspark_cryptoFFI.h
-	cp target/aarch64-apple-ios/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
-	cp target/lipo-ios-sim/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
-	cp target/lipo-macos/release/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+	cp target/aarch64-apple-ios/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+	cp target/lipo-ios-sim/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+	cp target/lipo-macos/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 
 # Set Android build variables.
 
