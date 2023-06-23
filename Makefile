@@ -26,9 +26,9 @@ build-apple-targets:
 	cargo build --profile release-smaller --target aarch64-apple-ios-sim
 
 combine-swift-binaries: build-apple-targets
-	mkdir -p target/lipo-ios-sim/release
+	mkdir -p target/lipo-ios-sim/release-smaller
 	lipo target/aarch64-apple-ios-sim/release-smaller/liblightspark_crypto.a target/x86_64-apple-ios/release-smaller/liblightspark_crypto.a -create -output target/lipo-ios-sim/release-smaller/liblightspark_crypto.a
-	mkdir -p target/lipo-macos/release
+	mkdir -p target/lipo-macos/release-smaller
 	lipo target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.a target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.a -create -output target/lipo-macos/release-smaller/liblightspark_crypto.a
 
 setup-xcframework: combine-swift-binaries
