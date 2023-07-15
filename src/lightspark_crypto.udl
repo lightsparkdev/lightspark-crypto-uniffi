@@ -47,4 +47,9 @@ interface LightsparkSigner {
         sequence<u8>? add_tweak,
         sequence<u8>? mul_tweak
     );
+
+    sequence<u8> build_commitment_secret(
+        [ByRef] Seed seed,
+        u64 idx
+    );
 };
