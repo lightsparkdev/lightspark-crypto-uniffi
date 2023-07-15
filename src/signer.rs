@@ -6,6 +6,7 @@ use k256::{
     elliptic_curve::{generic_array::GenericArray, FieldBytes, PrimeField, Scalar},
     NonZeroScalar, Secp256k1,
 };
+use sha2::{Sha256, Digest};
 use rand_core::OsRng;
 use wasm_bindgen::{JsError, JsValue};
 use wasm_bindgen::prelude::*;
@@ -143,6 +144,32 @@ impl LightsparkSigner {
             XPub::from_str(&public_key).map_err(|e| LightsparkSignerError::Bip32Error(e))?;
         let shared_secret = ecdh::diffie_hellman(secret_key, public_key.public_key().as_affine());
         Ok(shared_secret.raw_secret_bytes().to_vec())
+    }
+
+    pub fn build_commitment_secret(
+        &self,
+        seed: &Seed,
+        idx: u64,
+    ) -> Vec<u8> {
+        let mut res = self.build_commitment_seed(seed);
+        for i in 0..48 {
+            let bitpos = 47 - i;
+            if idx & (1 << bitpos) == (1 << bitpos) {
+                res[bitpos / 8] ^= 1 << (bitpos & 7);
+                res = Sha256::digest(&res).to_vec();
+            }
+        }
+        res
+    }
+
+    fn build_commitment_seed(
+        &self,
+        seed: &Seed,
+    ) -> Vec<u8> {
+        let mut hasher = Sha256::new();
+        hasher.update(seed.as_bytes());
+        hasher.update(b"commitment seed");
+        hasher.finalize().to_vec()
     }
 
     fn derive_and_tweak_key(
