@@ -31,25 +31,27 @@ interface Seed {
 };
 
 interface LightsparkSigner {
-    constructor();
+    constructor([ByRef] Seed seed);
 
     [Throws=LightsparkSignerError]
-    string derive_public_key([ByRef] Seed seed, string derivation_path);
+    string get_master_public_key();
 
     [Throws=LightsparkSignerError]
-    sequence<u8> ecdh([ByRef] Seed seed, string derivation_path, string public_key);
+    string derive_public_key(string derivation_path);
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> ecdh(string public_key);
+
+    sequence<u8> sign_invoice(string unsigned_invoice);
 
     [Throws=LightsparkSignerError]
     sequence<u8> derive_key_and_sign(
-        [ByRef] Seed seed,
         sequence<u8> message,
         string derivation_path,
         sequence<u8>? add_tweak,
         sequence<u8>? mul_tweak
     );
 
-    sequence<u8> build_commitment_secret(
-        [ByRef] Seed seed,
-        u64 idx
-    );
+    sequence<u8> get_per_commitment_point(u64 channdl_id, u64 per_commitment_point_idx);
+    sequence<u8> build_commitment_secret(u64 channdl_id, u64 per_commitment_point_idx);
 };
