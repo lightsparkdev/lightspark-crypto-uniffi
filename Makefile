@@ -8,6 +8,9 @@ setup-apple-targets:
 setup-android-targets:
 	rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android
 
+setup-go-targets:
+	rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
 setup-jvm-targets:
 	rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
@@ -17,6 +20,14 @@ code-gen-swift:
 code-gen-kotlin:
 	cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language kotlin --out-dir lightspark-crypto-kotlin
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
+
+code-gen-go:
+	mkdir -p lightspark-crypto-go/internal
+	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go
+	uniffi-bindgen-go src/lightspark_crypto.udl --out-dir lightspark-crypto-go
+	mv lightspark-crypto-go/uniffi/lightspark_crypto/lightspark_crypto.go lightspark-crypto-go/internal
+	sed -i '' 's/package lightspark_crypto/package internal/g' lightspark-crypto-go/internal/lightspark_crypto.go
+	rm -rf lightspark-crypto-go/uniffi
 
 build-apple-targets:
 	cargo build --profile release-smaller --target x86_64-apple-darwin
@@ -38,6 +49,17 @@ setup-xcframework: combine-swift-binaries
 	cp target/aarch64-apple-ios/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 	cp target/lipo-ios-sim/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 	cp target/lipo-macos/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
+
+go-libs:
+	# TODO(mhr): Add support for other OS.
+	cargo build --profile release-smaller --target x86_64-apple-darwin
+	cargo build --profile release-smaller --target aarch64-apple-darwin
+	mkdir -p lightspark-crypto-go/libs/darwin/amd64
+	mkdir -p lightspark-crypto-go/libs/darwin/arm64
+	cp target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/amd64
+	cp target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/arm64
+
+build-go: setup-go-targets code-gen-go go-libs
 
 # Set Android build variables.
 
