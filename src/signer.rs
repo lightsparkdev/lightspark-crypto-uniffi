@@ -1,15 +1,15 @@
 use std::{fmt, str::FromStr};
 
-use bip32::{secp256k1::ecdsa::signature::Signer, Prefix, XPrv, XPub};
+use bip32::{secp256k1::ecdsa::signature::Signer, secp256k1::ecdsa::Signature, Prefix, XPrv, XPub};
 use k256::{
     ecdh,
     elliptic_curve::{generic_array::GenericArray, FieldBytes, PrimeField, Scalar},
     NonZeroScalar, Secp256k1,
 };
-use sha2::{Sha256, Digest};
 use rand_core::OsRng;
-use wasm_bindgen::{JsError, JsValue};
+use sha2::{Digest, Sha256};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsError, JsValue};
 
 #[derive(Copy, Clone, Debug)]
 pub enum LightsparkSignerError {
@@ -104,14 +104,17 @@ pub struct LightsparkSigner {
 impl LightsparkSigner {
     pub fn new(seed: &Seed) -> Self {
         let seed = (*seed).clone();
-        let node_private_key = XPrv::derive_from_path(seed.as_bytes(), &"m/0".parse().unwrap()).unwrap();
+        let node_private_key =
+            XPrv::derive_from_path(seed.as_bytes(), &"m/0".parse().unwrap()).unwrap();
         let commitment_seed = Self::build_commitment_seed(&seed);
-        Self { seed, node_private_key, commitment_seed }
+        Self {
+            seed,
+            node_private_key,
+            commitment_seed,
+        }
     }
 
-    fn build_commitment_seed(
-        seed: &Seed,
-    ) -> Vec<u8> {
+    fn build_commitment_seed(seed: &Seed) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
         hasher.update(b"commitment seed");
@@ -141,17 +144,11 @@ impl LightsparkSigner {
         mul_tweak: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
         let signing_key = self.derive_and_tweak_key(derivation_path, add_tweak, mul_tweak)?;
-
-        use bip32::secp256k1::ecdsa::Signature;
-
         let signature: Signature = signing_key.sign(&message.as_slice());
         Ok(signature.to_bytes().to_vec())
     }
 
-    pub fn ecdh(
-        &self,
-        public_key: String,
-    ) -> Result<Vec<u8>, LightsparkSignerError> {
+    pub fn ecdh(&self, public_key: String) -> Result<Vec<u8>, LightsparkSignerError> {
         let secret_key = self.node_private_key.private_key().as_nonzero_scalar();
         let public_key =
             XPub::from_str(&public_key).map_err(|e| LightsparkSignerError::Bip32Error(e))?;
@@ -159,14 +156,21 @@ impl LightsparkSigner {
         Ok(shared_secret.raw_secret_bytes().to_vec())
     }
 
-    pub fn build_commitment_secret(
-        &self,
-        idx: u64,
-    ) -> Vec<u8> {
+    pub fn sign_invoice(&self, unsigned_invoice: String) -> Vec<u8> {
+        let signing_key = self.node_private_key.private_key();
+        let signature: Signature = signing_key.sign(&unsigned_invoice.as_bytes());
+        signature.to_bytes().to_vec()
+    }
+
+    pub fn get_per_commitment_point(&self, channel: u64, per_commitment_point_idx: u64) -> Vec<u8> {
+        unimplemented!()
+    }
+
+    pub fn build_commitment_secret(&self, channel: u64, per_commitment_point_idx: u64) -> Vec<u8> {
         let mut res = self.commitment_seed.clone();
         for i in 0..48 {
             let bitpos = 47 - i;
-            if idx & (1 << bitpos) == (1 << bitpos) {
+            if per_commitment_point_idx & (1 << bitpos) == (1 << bitpos) {
                 res[bitpos / 8] ^= 1 << (bitpos & 7);
                 res = Sha256::digest(&res).to_vec();
             }
@@ -322,12 +326,8 @@ mod tests {
         let signer2 = LightsparkSigner::new(&seed2);
         let pub2 = signer2.derive_public_key("m/0".to_owned()).unwrap();
 
-        let secret_1 = signer1
-            .ecdh(pub2.to_string())
-            .unwrap();
-        let secret_2 = signer2
-            .ecdh(pub1.to_string())
-            .unwrap();
+        let secret_1 = signer1.ecdh(pub2.to_string()).unwrap();
+        let secret_2 = signer2.ecdh(pub1.to_string()).unwrap();
         assert_eq!(secret_1, secret_2);
     }
 

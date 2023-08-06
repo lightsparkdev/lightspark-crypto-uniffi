@@ -42,6 +42,8 @@ interface LightsparkSigner {
     [Throws=LightsparkSignerError]
     sequence<u8> ecdh(string public_key);
 
+    sequence<u8> sign_invoice(string unsigned_invoice);
+
     [Throws=LightsparkSignerError]
     sequence<u8> derive_key_and_sign(
         sequence<u8> message,
@@ -50,5 +52,6 @@ interface LightsparkSigner {
         sequence<u8>? mul_tweak
     );
 
-    sequence<u8> build_commitment_secret(u64 idx);
+    sequence<u8> get_per_commitment_point(u64 channdl_id, u64 per_commitment_point_idx);
+    sequence<u8> build_commitment_secret(u64 channdl_id, u64 per_commitment_point_idx);
 };
