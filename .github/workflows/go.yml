@@ -31,5 +31,5 @@ jobs:
       working-directory: lightspark-crypto-go
 
     - name: Test
-      run: LD_LIBRARY_PATH=$PWD/libs/linux/arm64 go test -v
+      run: LD_LIBRARY_PATH=$PWD/libs/linux/amd64 go test -v
       working-directory: lightspark-crypto-go
