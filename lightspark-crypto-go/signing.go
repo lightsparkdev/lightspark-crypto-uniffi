@@ -37,33 +37,33 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 }
 
 func Ecdh(seedBytes []byte, derivationPath string, otherPubKey string) ([]byte, error) {
-	signer := internal.NewLightsparkSigner()
-	defer signer.Destroy()
-
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	return signer.Ecdh(seed, derivationPath, otherPubKey)
+	signer := internal.NewLightsparkSigner(seed)
+	defer signer.Destroy()
+
+	return signer.Ecdh(otherPubKey)
 }
 
 func DerivePublicKey(seedBytes []byte, derivationPath string) (string, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner()
+	signer := internal.NewLightsparkSigner(seed)
 	defer signer.Destroy()
 
-	return signer.DerivePublicKey(seed, derivationPath)
+	return signer.DerivePublicKey(derivationPath)
 }
 
 func SignMessage(message []byte, seedBytes []byte, derivationPath string, multTweak *[]byte, addTweak *[]byte) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner()
+	signer := internal.NewLightsparkSigner(seed)
 	defer signer.Destroy()
 
-	signature, err := signer.DeriveKeyAndSign(seed, message, derivationPath, addTweak, multTweak)
+	signature, err := signer.DeriveKeyAndSign(message, derivationPath, addTweak, multTweak)
 	if err != nil {
 		return nil, err
 	}
