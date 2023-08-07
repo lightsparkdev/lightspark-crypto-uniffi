@@ -36,7 +36,7 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 	return seed.AsBytes(), nil
 }
 
-func Ecdh(seedBytes []byte, derivationPath string, otherPubKey string) ([]byte, error) {
+func Ecdh(seedBytes []byte, otherPubKey string) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
