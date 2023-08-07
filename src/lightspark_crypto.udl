@@ -33,6 +33,9 @@ interface Seed {
 interface LightsparkSigner {
     constructor([ByRef] Seed seed);
 
+    [Name="from_bytes"]
+    constructor(sequence<u8> seed);
+
     [Throws=LightsparkSignerError]
     string get_master_public_key();
 

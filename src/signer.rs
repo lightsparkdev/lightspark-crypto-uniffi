@@ -114,6 +114,11 @@ impl LightsparkSigner {
         }
     }
 
+    pub fn from_bytes(seed: Vec<u8>) -> Self {
+        let seed = Seed::new(seed.clone());
+        Self::new(&seed)
+    }
+
     fn build_commitment_seed(seed: &Seed) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
@@ -162,10 +167,12 @@ impl LightsparkSigner {
         signature.to_bytes().to_vec()
     }
 
+    #[allow(unused_variables)] // TODO: remove after implementation
     pub fn get_per_commitment_point(&self, channel: u64, per_commitment_point_idx: u64) -> Vec<u8> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)] // TODO: remove after implementation
     pub fn build_commitment_secret(&self, channel: u64, per_commitment_point_idx: u64) -> Vec<u8> {
         let mut res = self.commitment_seed.clone();
         for i in 0..48 {
