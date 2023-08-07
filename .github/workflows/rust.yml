@@ -1,15 +1,15 @@
 name: Rust - Build and Test
 
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
     paths:
       - 'Cargo.*'
       - '*.rs'
       - 'src/**'
       - '.github/workflows/rust.yml'
-  pull_request:
+  push:
     branches: [ "main" ]
+    paths:
       - 'Cargo.*'
       - '*.rs'
       - 'src/**'
