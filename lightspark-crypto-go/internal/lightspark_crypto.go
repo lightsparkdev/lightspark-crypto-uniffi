@@ -47,77 +47,90 @@ typedef struct RustCallStatus {
 // ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V4 in this file.           ⚠️
 #endif // def UNIFFI_SHARED_H
 
-void ffi_lightspark_crypto_9b00_Mnemonic_object_free(
+void ffi_lightspark_crypto_70d3_Mnemonic_object_free(
 	void* ptr,
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_Mnemonic_new(
+void* lightspark_crypto_70d3_Mnemonic_new(
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_Mnemonic_from_entropy(
+void* lightspark_crypto_70d3_Mnemonic_from_entropy(
 	RustBuffer entropy,
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_Mnemonic_from_phrase(
+void* lightspark_crypto_70d3_Mnemonic_from_phrase(
 	RustBuffer phrase,
 	RustCallStatus* out_status
 );
 
-RustBuffer lightspark_crypto_9b00_Mnemonic_as_string(
+RustBuffer lightspark_crypto_70d3_Mnemonic_as_string(
 	void* ptr,
 	RustCallStatus* out_status
 );
 
-void ffi_lightspark_crypto_9b00_Seed_object_free(
+void ffi_lightspark_crypto_70d3_Seed_object_free(
 	void* ptr,
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_Seed_new(
+void* lightspark_crypto_70d3_Seed_new(
 	RustBuffer seed,
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_Seed_from_mnemonic(
+void* lightspark_crypto_70d3_Seed_from_mnemonic(
 	void* mnemonic,
 	RustCallStatus* out_status
 );
 
-RustBuffer lightspark_crypto_9b00_Seed_as_bytes(
+RustBuffer lightspark_crypto_70d3_Seed_as_bytes(
 	void* ptr,
 	RustCallStatus* out_status
 );
 
-void ffi_lightspark_crypto_9b00_LightsparkSigner_object_free(
+void ffi_lightspark_crypto_70d3_LightsparkSigner_object_free(
 	void* ptr,
 	RustCallStatus* out_status
 );
 
-void* lightspark_crypto_9b00_LightsparkSigner_new(
-	RustCallStatus* out_status
-);
-
-RustBuffer lightspark_crypto_9b00_LightsparkSigner_derive_public_key(
-	void* ptr,
+void* lightspark_crypto_70d3_LightsparkSigner_new(
 	void* seed,
+	RustCallStatus* out_status
+);
+
+void* lightspark_crypto_70d3_LightsparkSigner_from_bytes(
+	RustBuffer seed,
+	RustCallStatus* out_status
+);
+
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_get_master_public_key(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_derive_public_key(
+	void* ptr,
 	RustBuffer derivation_path,
 	RustCallStatus* out_status
 );
 
-RustBuffer lightspark_crypto_9b00_LightsparkSigner_ecdh(
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_ecdh(
 	void* ptr,
-	void* seed,
-	RustBuffer derivation_path,
 	RustBuffer public_key,
 	RustCallStatus* out_status
 );
 
-RustBuffer lightspark_crypto_9b00_LightsparkSigner_derive_key_and_sign(
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_sign_invoice(
 	void* ptr,
-	void* seed,
+	RustBuffer unsigned_invoice,
+	RustCallStatus* out_status
+);
+
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_derive_key_and_sign(
+	void* ptr,
 	RustBuffer message,
 	RustBuffer derivation_path,
 	RustBuffer add_tweak,
@@ -125,29 +138,36 @@ RustBuffer lightspark_crypto_9b00_LightsparkSigner_derive_key_and_sign(
 	RustCallStatus* out_status
 );
 
-RustBuffer lightspark_crypto_9b00_LightsparkSigner_build_commitment_secret(
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_get_per_commitment_point(
 	void* ptr,
-	void* seed,
-	uint64_t idx,
+	uint64_t channdl_id,
+	uint64_t per_commitment_point_idx,
 	RustCallStatus* out_status
 );
 
-RustBuffer ffi_lightspark_crypto_9b00_rustbuffer_alloc(
+RustBuffer lightspark_crypto_70d3_LightsparkSigner_build_commitment_secret(
+	void* ptr,
+	uint64_t channdl_id,
+	uint64_t per_commitment_point_idx,
+	RustCallStatus* out_status
+);
+
+RustBuffer ffi_lightspark_crypto_70d3_rustbuffer_alloc(
 	int32_t size,
 	RustCallStatus* out_status
 );
 
-RustBuffer ffi_lightspark_crypto_9b00_rustbuffer_from_bytes(
+RustBuffer ffi_lightspark_crypto_70d3_rustbuffer_from_bytes(
 	ForeignBytes bytes,
 	RustCallStatus* out_status
 );
 
-void ffi_lightspark_crypto_9b00_rustbuffer_free(
+void ffi_lightspark_crypto_70d3_rustbuffer_free(
 	RustBuffer buf,
 	RustCallStatus* out_status
 );
 
-RustBuffer ffi_lightspark_crypto_9b00_rustbuffer_reserve(
+RustBuffer ffi_lightspark_crypto_70d3_rustbuffer_reserve(
 	RustBuffer buf,
 	int32_t additional,
 	RustCallStatus* out_status
@@ -212,7 +232,7 @@ func stringToCRustBuffer(str string) C.RustBuffer {
 
 func (rb rustBuffer) free() {
 	rustCall(func(status *C.RustCallStatus) bool {
-		C.ffi_lightspark_crypto_9b00_rustbuffer_free(rb.self, status)
+		C.ffi_lightspark_crypto_70d3_rustbuffer_free(rb.self, status)
 		return false
 	})
 }
@@ -599,21 +619,29 @@ type LightsparkSigner struct {
 	ffiObject FfiObject
 }
 
-func NewLightsparkSigner() *LightsparkSigner {
+func NewLightsparkSigner(seed *Seed) *LightsparkSigner {
 
 	return FfiConverterLightsparkSignerINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_LightsparkSigner_new(_uniffiStatus)
+		return C.lightspark_crypto_70d3_LightsparkSigner_new(FfiConverterSeedINSTANCE.lower(seed), _uniffiStatus)
 	}))
 
 }
 
-func (_self *LightsparkSigner) DerivePublicKey(seed *Seed, derivationPath string) (string, error) {
+func LightsparkSignerFromBytes(seed []uint8) *LightsparkSigner {
+
+	return FfiConverterLightsparkSignerINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.lightspark_crypto_70d3_LightsparkSigner_from_bytes(FfiConverterSequenceuint8INSTANCE.lower(seed), _uniffiStatus)
+	}))
+
+}
+
+func (_self *LightsparkSigner) GetMasterPublicKey() (string, error) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
 
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_LightsparkSigner_derive_public_key(
-			_pointer, FfiConverterSeedINSTANCE.lower(seed), FfiConverterstringINSTANCE.lower(derivationPath), _uniffiStatus)
+		return C.lightspark_crypto_70d3_LightsparkSigner_get_master_public_key(
+			_pointer, _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -623,13 +651,29 @@ func (_self *LightsparkSigner) DerivePublicKey(seed *Seed, derivationPath string
 	}
 
 }
-func (_self *LightsparkSigner) Ecdh(seed *Seed, derivationPath string, publicKey string) ([]uint8, error) {
+func (_self *LightsparkSigner) DerivePublicKey(derivationPath string) (string, error) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
 
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_LightsparkSigner_ecdh(
-			_pointer, FfiConverterSeedINSTANCE.lower(seed), FfiConverterstringINSTANCE.lower(derivationPath), FfiConverterstringINSTANCE.lower(publicKey), _uniffiStatus)
+		return C.lightspark_crypto_70d3_LightsparkSigner_derive_public_key(
+			_pointer, FfiConverterstringINSTANCE.lower(derivationPath), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterstringINSTANCE.lift(_uniffiRV), _uniffiErr
+	}
+
+}
+func (_self *LightsparkSigner) Ecdh(publicKey string) ([]uint8, error) {
+	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
+	defer _self.ffiObject.decrementPointer()
+
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
+		return C.lightspark_crypto_70d3_LightsparkSigner_ecdh(
+			_pointer, FfiConverterstringINSTANCE.lower(publicKey), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -639,29 +683,49 @@ func (_self *LightsparkSigner) Ecdh(seed *Seed, derivationPath string, publicKey
 	}
 
 }
-func (_self *LightsparkSigner) DeriveKeyAndSign(seed *Seed, message []uint8, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
-	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
-	defer _self.ffiObject.decrementPointer()
-
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_LightsparkSigner_derive_key_and_sign(
-			_pointer, FfiConverterSeedINSTANCE.lower(seed), FfiConverterSequenceuint8INSTANCE.lower(message), FfiConverterstringINSTANCE.lower(derivationPath), FfiConverterOptionalSequenceuint8INSTANCE.lower(addTweak), FfiConverterOptionalSequenceuint8INSTANCE.lower(mulTweak), _uniffiStatus)
-	})
-	if _uniffiErr != nil {
-		var _uniffiDefaultValue []uint8
-		return _uniffiDefaultValue, _uniffiErr
-	} else {
-		return FfiConverterSequenceuint8INSTANCE.lift(_uniffiRV), _uniffiErr
-	}
-
-}
-func (_self *LightsparkSigner) BuildCommitmentSecret(seed *Seed, idx uint64) []uint8 {
+func (_self *LightsparkSigner) SignInvoice(unsignedInvoice string) []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
 
 	return FfiConverterSequenceuint8INSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_LightsparkSigner_build_commitment_secret(
-			_pointer, FfiConverterSeedINSTANCE.lower(seed), FfiConverteruint64INSTANCE.lower(idx), _uniffiStatus)
+		return C.lightspark_crypto_70d3_LightsparkSigner_sign_invoice(
+			_pointer, FfiConverterstringINSTANCE.lower(unsignedInvoice), _uniffiStatus)
+	}))
+
+}
+func (_self *LightsparkSigner) DeriveKeyAndSign(message []uint8, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
+	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
+	defer _self.ffiObject.decrementPointer()
+
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
+		return C.lightspark_crypto_70d3_LightsparkSigner_derive_key_and_sign(
+			_pointer, FfiConverterSequenceuint8INSTANCE.lower(message), FfiConverterstringINSTANCE.lower(derivationPath), FfiConverterOptionalSequenceuint8INSTANCE.lower(addTweak), FfiConverterOptionalSequenceuint8INSTANCE.lower(mulTweak), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []uint8
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterSequenceuint8INSTANCE.lift(_uniffiRV), _uniffiErr
+	}
+
+}
+func (_self *LightsparkSigner) GetPerCommitmentPoint(channdlId uint64, perCommitmentPointIdx uint64) []uint8 {
+	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
+	defer _self.ffiObject.decrementPointer()
+
+	return FfiConverterSequenceuint8INSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
+		return C.lightspark_crypto_70d3_LightsparkSigner_get_per_commitment_point(
+			_pointer, FfiConverteruint64INSTANCE.lower(channdlId), FfiConverteruint64INSTANCE.lower(perCommitmentPointIdx), _uniffiStatus)
+	}))
+
+}
+func (_self *LightsparkSigner) BuildCommitmentSecret(channdlId uint64, perCommitmentPointIdx uint64) []uint8 {
+	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
+	defer _self.ffiObject.decrementPointer()
+
+	return FfiConverterSequenceuint8INSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
+		return C.lightspark_crypto_70d3_LightsparkSigner_build_commitment_secret(
+			_pointer, FfiConverteruint64INSTANCE.lower(channdlId), FfiConverteruint64INSTANCE.lower(perCommitmentPointIdx), _uniffiStatus)
 	}))
 
 }
@@ -680,7 +744,7 @@ func (c FfiConverterLightsparkSigner) lift(pointer unsafe.Pointer) *LightsparkSi
 		newFfiObject(
 			pointer,
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
-				C.ffi_lightspark_crypto_9b00_LightsparkSigner_object_free(pointer, status)
+				C.ffi_lightspark_crypto_70d3_LightsparkSigner_object_free(pointer, status)
 			}),
 	}
 	runtime.SetFinalizer(result, (*LightsparkSigner).Destroy)
@@ -717,7 +781,7 @@ type Mnemonic struct {
 func NewMnemonic() *Mnemonic {
 
 	return FfiConverterMnemonicINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_Mnemonic_new(_uniffiStatus)
+		return C.lightspark_crypto_70d3_Mnemonic_new(_uniffiStatus)
 	}))
 
 }
@@ -725,7 +789,7 @@ func NewMnemonic() *Mnemonic {
 func MnemonicFromEntropy(entropy []uint8) (*Mnemonic, error) {
 
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_Mnemonic_from_entropy(FfiConverterSequenceuint8INSTANCE.lower(entropy), _uniffiStatus)
+		return C.lightspark_crypto_70d3_Mnemonic_from_entropy(FfiConverterSequenceuint8INSTANCE.lower(entropy), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *Mnemonic
@@ -738,7 +802,7 @@ func MnemonicFromEntropy(entropy []uint8) (*Mnemonic, error) {
 func MnemonicFromPhrase(phrase string) (*Mnemonic, error) {
 
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_Mnemonic_from_phrase(FfiConverterstringINSTANCE.lower(phrase), _uniffiStatus)
+		return C.lightspark_crypto_70d3_Mnemonic_from_phrase(FfiConverterstringINSTANCE.lower(phrase), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *Mnemonic
@@ -754,7 +818,7 @@ func (_self *Mnemonic) AsString() string {
 	defer _self.ffiObject.decrementPointer()
 
 	return FfiConverterstringINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_Mnemonic_as_string(
+		return C.lightspark_crypto_70d3_Mnemonic_as_string(
 			_pointer, _uniffiStatus)
 	}))
 
@@ -774,7 +838,7 @@ func (c FfiConverterMnemonic) lift(pointer unsafe.Pointer) *Mnemonic {
 		newFfiObject(
 			pointer,
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
-				C.ffi_lightspark_crypto_9b00_Mnemonic_object_free(pointer, status)
+				C.ffi_lightspark_crypto_70d3_Mnemonic_object_free(pointer, status)
 			}),
 	}
 	runtime.SetFinalizer(result, (*Mnemonic).Destroy)
@@ -811,7 +875,7 @@ type Seed struct {
 func NewSeed(seed []uint8) *Seed {
 
 	return FfiConverterSeedINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_Seed_new(FfiConverterSequenceuint8INSTANCE.lower(seed), _uniffiStatus)
+		return C.lightspark_crypto_70d3_Seed_new(FfiConverterSequenceuint8INSTANCE.lower(seed), _uniffiStatus)
 	}))
 
 }
@@ -819,7 +883,7 @@ func NewSeed(seed []uint8) *Seed {
 func SeedFromMnemonic(mnemonic *Mnemonic) *Seed {
 
 	return FfiConverterSeedINSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.lightspark_crypto_9b00_Seed_from_mnemonic(FfiConverterMnemonicINSTANCE.lower(mnemonic), _uniffiStatus)
+		return C.lightspark_crypto_70d3_Seed_from_mnemonic(FfiConverterMnemonicINSTANCE.lower(mnemonic), _uniffiStatus)
 	}))
 
 }
@@ -829,7 +893,7 @@ func (_self *Seed) AsBytes() []uint8 {
 	defer _self.ffiObject.decrementPointer()
 
 	return FfiConverterSequenceuint8INSTANCE.lift(rustCall(func(_uniffiStatus *C.RustCallStatus) C.RustBuffer {
-		return C.lightspark_crypto_9b00_Seed_as_bytes(
+		return C.lightspark_crypto_70d3_Seed_as_bytes(
 			_pointer, _uniffiStatus)
 	}))
 
@@ -849,7 +913,7 @@ func (c FfiConverterSeed) lift(pointer unsafe.Pointer) *Seed {
 		newFfiObject(
 			pointer,
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
-				C.ffi_lightspark_crypto_9b00_Seed_object_free(pointer, status)
+				C.ffi_lightspark_crypto_70d3_Seed_object_free(pointer, status)
 			}),
 	}
 	runtime.SetFinalizer(result, (*Seed).Destroy)
