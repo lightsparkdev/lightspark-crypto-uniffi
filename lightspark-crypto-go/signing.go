@@ -4,8 +4,8 @@ package lightspark_crypto
 
 // #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libs/darwin/amd64 -llightspark_crypto
 // #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libs/darwin/arm64 -llightspark_crypto
-// #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libs/linux/amd64 -llightspark_crypto
-// #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/libs/linux/arm64 -llightspark_crypto
+// #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libs/linux/amd64 -Wl,-Bstatic -llightspark_crypto -Wl,-Bdynamic
+// #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/libs/linux/arm64 -Wl,-Bstatic -llightspark_crypto -Wl,-Bdynamic
 import "C"
 import (
 	"strings"
