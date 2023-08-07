@@ -67,8 +67,8 @@ go-libs: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm
 	mkdir -p lightspark-crypto-go/libs/linux/arm64
 	cp target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/amd64
 	cp target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/arm64
-	cp docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-go/libs/linux/amd64
-	cp docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-go/libs/linux/arm64
+	cp docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/linux/amd64
+	cp docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/linux/arm64
 
 build-go: setup-go-targets code-gen-go go-libs
 
