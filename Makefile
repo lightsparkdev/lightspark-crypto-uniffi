@@ -9,7 +9,7 @@ setup-android-targets:
 	rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android
 
 setup-go-targets:
-	rustup target add aarch64-apple-darwin x86_64-apple-darwin
+	rustup target add x86_64-apple-darwin aarch64-apple-darwin 
 
 setup-jvm-targets:
 	rustup target add x86_64-apple-darwin aarch64-apple-darwin
@@ -21,6 +21,12 @@ code-gen-kotlin:
 	cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language kotlin --out-dir lightspark-crypto-kotlin
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
+build-darwin-amd64:
+	cargo build --profile release-smaller --target x86_64-apple-darwin
+
+build-darwin-arm64:
+	cargo build --profile release-smaller --target aarch64-apple-darwin
+
 code-gen-go:
 	mkdir -p lightspark-crypto-go/internal
 	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go
@@ -29,9 +35,7 @@ code-gen-go:
 	sed -i '' 's/package lightspark_crypto/package internal/g' lightspark-crypto-go/internal/lightspark_crypto.go
 	rm -rf lightspark-crypto-go/uniffi
 
-build-apple-targets:
-	cargo build --profile release-smaller --target x86_64-apple-darwin
-	cargo build --profile release-smaller --target aarch64-apple-darwin
+build-apple-targets: build-darwin-amd64 build-darwin-arm64
 	cargo build --profile release-smaller --target x86_64-apple-ios
 	cargo build --profile release-smaller --target aarch64-apple-ios
 	cargo build --profile release-smaller --target aarch64-apple-ios-sim
@@ -50,14 +54,21 @@ setup-xcframework: combine-swift-binaries
 	cp target/lipo-ios-sim/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 	cp target/lipo-macos/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 
-go-libs:
-	# TODO(mhr): Add support for other OS.
-	cargo build --profile release-smaller --target x86_64-apple-darwin
-	cargo build --profile release-smaller --target aarch64-apple-darwin
+build-linux-amd64:
+	docker buildx build -f build.Dockerfile --platform linux/amd64 -o docker-out .
+
+build-linux-arm64:
+	docker buildx build -f build.Dockerfile --platform linux/arm64 -o docker-out .
+
+go-libs: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64
 	mkdir -p lightspark-crypto-go/libs/darwin/amd64
 	mkdir -p lightspark-crypto-go/libs/darwin/arm64
+	mkdir -p lightspark-crypto-go/libs/linux/amd64
+	mkdir -p lightspark-crypto-go/libs/linux/arm64
 	cp target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/amd64
 	cp target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/arm64
+	cp docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-go/libs/linux/amd64
+	cp docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-go/libs/linux/arm64
 
 build-go: setup-go-targets code-gen-go go-libs
 
@@ -95,9 +106,7 @@ android-libs: build-android-arm64 build-android-x86 build-android-arm7
 
 build-android: setup-android-targets code-gen-kotlin android-libs
 
-build-jvm-targets: setup-jvm-targets
-	cargo build --profile release-smaller --target aarch64-apple-darwin
-	cargo build --profile release-smaller --target x86_64-apple-darwin
+build-jvm-targets: setup-jvm-targets build-darwin-amd64 build-darwin-arm64
 
 jvm-libs: build-jvm-targets
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64
