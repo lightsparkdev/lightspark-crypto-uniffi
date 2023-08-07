@@ -3,8 +3,17 @@ name: Rust - Build and Test
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Cargo.*'
+      - '*.rs'
+      - 'src/**'
+      - '.github/workflows/rust.yml'
   pull_request:
     branches: [ "main" ]
+      - 'Cargo.*'
+      - '*.rs'
+      - 'src/**'
+      - '.github/workflows/rust.yml'
 
 env:
   CARGO_TERM_COLOR: always
