@@ -45,30 +45,21 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 }
 
 func Ecdh(seedBytes []byte, network BitcoinNetwork, otherPubKey []byte) ([]byte, error) {
-	seed := internal.NewSeed(seedBytes)
-	defer seed.Destroy()
-
-	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
+	signer := getLightsparkSigner(seedBytes, network)
 	defer signer.Destroy()
 
 	return signer.Ecdh(otherPubKey)
 }
 
 func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
-	seed := internal.NewSeed(seedBytes)
-	defer seed.Destroy()
-
-	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
+	signer := getLightsparkSigner(seedBytes, network)
 	defer signer.Destroy()
 
 	return signer.DerivePublicKey(derivationPath)
 }
 
 func SignMessage(seedBytes []byte, network BitcoinNetwork, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
-	seed := internal.NewSeed(seedBytes)
-	defer seed.Destroy()
-
-	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
+	signer := getLightsparkSigner(seedBytes, network)
 	defer signer.Destroy()
 
 	signature, err := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
@@ -79,7 +70,49 @@ func SignMessage(seedBytes []byte, network BitcoinNetwork, message []byte, deriv
 	return signature, nil
 }
 
-func toFfiNetwork(network BitcoinNetwork) internal.Network {
+type SignedInvoice struct {
+	recoveryId int32
+	signature  []byte
+}
+
+func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice string) (*SignedInvoice, error) {
+	signer := getLightsparkSigner(seedBytes, network)
+	defer signer.Destroy()
+
+	signature, err := signer.SignInvoice(unsignedInvoice)
+	if err != nil {
+		return nil, err
+	}
+
+	defer signature.Destroy()
+
+	return &SignedInvoice{
+		recoveryId: signature.GetRecoveryId(),
+		signature:  signature.GetSignature(),
+	}, nil
+}
+
+func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice []byte) (*SignedInvoice, error) {
+	signer := getLightsparkSigner(seedBytes, network)
+	defer signer.Destroy()
+
+	signature, err := signer.SignInvoiceHash(unsignedInvoice)
+	if err != nil {
+		return nil, err
+	}
+
+	defer signature.Destroy()
+
+	return &SignedInvoice{
+		recoveryId: signature.GetRecoveryId(),
+		signature:  signature.GetSignature(),
+	}, nil
+}
+
+func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) *internal.LightsparkSigner {
+	seed := internal.NewSeed(seedBytes)
+	defer seed.Destroy()
+
 	var ffiNetwork internal.Network
 
 	switch network {
@@ -91,5 +124,5 @@ func toFfiNetwork(network BitcoinNetwork) internal.Network {
 		ffiNetwork = internal.NetworkRegtest
 	}
 
-	return ffiNetwork
+	return internal.NewLightsparkSigner(seed, ffiNetwork)
 }
