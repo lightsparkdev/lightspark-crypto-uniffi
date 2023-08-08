@@ -13,6 +13,14 @@ import (
 	"github.com/lightsparkdev/lightspark-crypto-uniffi/lightspark-crypto-go/internal"
 )
 
+type BitcoinNetwork uint
+
+const (
+	Mainnet BitcoinNetwork = 1
+	Testnet BitcoinNetwork = 2
+	Regtest BitcoinNetwork = 3
+)
+
 func GetMnemonicSeedPhrase(entropy []byte) ([]string, error) {
 	mnemonic, err := internal.MnemonicFromEntropy(entropy)
 	if err != nil {
@@ -36,31 +44,31 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 	return seed.AsBytes(), nil
 }
 
-func Ecdh(seedBytes []byte, network internal.Network, otherPubKey []byte) ([]byte, error) {
+func Ecdh(seedBytes []byte, network BitcoinNetwork, otherPubKey []byte) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed, network)
+	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
 	defer signer.Destroy()
 
 	return signer.Ecdh(otherPubKey)
 }
 
-func DerivePublicKey(seedBytes []byte, network internal.Network, derivationPath string) (string, error) {
+func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed, network)
+	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
 	defer signer.Destroy()
 
 	return signer.DerivePublicKey(derivationPath)
 }
 
-func SignMessage(seedBytes []byte, network internal.Network, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
+func SignMessage(seedBytes []byte, network BitcoinNetwork, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed, network)
+	signer := internal.NewLightsparkSigner(seed, toFfiNetwork(network))
 	defer signer.Destroy()
 
 	signature, err := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
@@ -69,4 +77,19 @@ func SignMessage(seedBytes []byte, network internal.Network, message []byte, der
 	}
 
 	return signature, nil
+}
+
+func toFfiNetwork(network BitcoinNetwork) internal.Network {
+	var ffiNetwork internal.Network
+
+	switch network {
+	case Mainnet:
+		ffiNetwork = internal.NetworkBitcoin
+	case Testnet:
+		ffiNetwork = internal.NetworkTestnet
+	case Regtest:
+		ffiNetwork = internal.NetworkRegtest
+	}
+
+	return ffiNetwork
 }

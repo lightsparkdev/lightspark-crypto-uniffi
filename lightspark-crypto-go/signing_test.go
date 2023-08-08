@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/lightsparkdev/lightspark-crypto-uniffi/lightspark-crypto-go/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +51,7 @@ func TestDerivePublicKey(t *testing.T) {
 
 	derivationPath := "m/0/2147483647'/1"
 
-	publicKey, err := DerivePublicKey(privateKeySeed, internal.NetworkBitcoin, derivationPath)
+	publicKey, err := DerivePublicKey(privateKeySeed, Mainnet, derivationPath)
 
 	require.NoError(t, err, "Failed to derive public key")
 	require.Equal(t, "xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon", publicKey)
@@ -66,7 +65,7 @@ func TestSignMessage(t *testing.T) {
 
 	derivationPath := "m/0/2147483647'/1"
 
-	signedMessage, err := SignMessage(privateKeySeed, internal.NetworkBitcoin, message[:], derivationPath, false, nil, nil)
+	signedMessage, err := SignMessage(privateKeySeed, Mainnet, message[:], derivationPath, false, nil, nil)
 	require.NoError(t, err, "Failed to sign message")
 	require.Equal(t, "fagpGOb9o/E8g62yL6jV5wtpTVzJ7R4rh0Xt2Uw4fPVd1Q+2ZJbkSrRBRj0bvk1qTSiCvoiCfD5CMEHZL4fAlA==", base64.StdEncoding.EncodeToString(signedMessage))
 }
