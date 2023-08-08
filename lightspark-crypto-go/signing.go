@@ -109,6 +109,20 @@ func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice [
 	}, nil
 }
 
+func GetPerCommitmentPoint(seedBytes []byte, network BitcoinNetwork, derivationPath string, perCommitmentPointIdx uint64) ([]byte, error) {
+	signer := getLightsparkSigner(seedBytes, network)
+	defer signer.Destroy()
+
+	return signer.GetPerCommitmentPoint(derivationPath, perCommitmentPointIdx)
+}
+
+func ReleasePerCommitmentSecret(seedBytes []byte, network BitcoinNetwork, derivationPath string, perCommitmentPointIdx uint64) ([]byte, error) {
+	signer := getLightsparkSigner(seedBytes, network)
+	defer signer.Destroy()
+
+	return signer.ReleasePerCommitmentSecret(derivationPath, perCommitmentPointIdx)
+}
+
 func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) *internal.LightsparkSigner {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
