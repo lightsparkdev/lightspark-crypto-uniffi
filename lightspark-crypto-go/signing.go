@@ -36,34 +36,34 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 	return seed.AsBytes(), nil
 }
 
-func Ecdh(seedBytes []byte, otherPubKey string) ([]byte, error) {
+func Ecdh(seedBytes []byte, network internal.Network, otherPubKey []byte) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed)
+	signer := internal.NewLightsparkSigner(seed, network)
 	defer signer.Destroy()
 
 	return signer.Ecdh(otherPubKey)
 }
 
-func DerivePublicKey(seedBytes []byte, derivationPath string) (string, error) {
+func DerivePublicKey(seedBytes []byte, network internal.Network, derivationPath string) (string, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed)
+	signer := internal.NewLightsparkSigner(seed, network)
 	defer signer.Destroy()
 
 	return signer.DerivePublicKey(derivationPath)
 }
 
-func SignMessage(message []byte, seedBytes []byte, derivationPath string, multTweak *[]byte, addTweak *[]byte) ([]byte, error) {
+func SignMessage(seedBytes []byte, network internal.Network, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	signer := internal.NewLightsparkSigner(seed)
+	signer := internal.NewLightsparkSigner(seed, network)
 	defer signer.Destroy()
 
-	signature, err := signer.DeriveKeyAndSign(message, derivationPath, addTweak, multTweak)
+	signature, err := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
 	if err != nil {
 		return nil, err
 	}
