@@ -71,8 +71,8 @@ func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, 
 }
 
 type SignedInvoice struct {
-	recoveryId int32
-	signature  []byte
+	RecoveryId int32
+	Signature  []byte
 }
 
 func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice string) (*SignedInvoice, error) {
@@ -87,8 +87,8 @@ func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice strin
 	defer signature.Destroy()
 
 	return &SignedInvoice{
-		recoveryId: signature.GetRecoveryId(),
-		signature:  signature.GetSignature(),
+		RecoveryId: signature.GetRecoveryId(),
+		Signature:  signature.GetSignature(),
 	}, nil
 }
 
@@ -104,8 +104,8 @@ func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice [
 	defer signature.Destroy()
 
 	return &SignedInvoice{
-		recoveryId: signature.GetRecoveryId(),
-		signature:  signature.GetSignature(),
+		RecoveryId: signature.GetRecoveryId(),
+		Signature:  signature.GetSignature(),
 	}, nil
 }
 
