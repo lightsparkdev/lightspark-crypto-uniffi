@@ -57,7 +57,7 @@ func TestDerivePublicKey(t *testing.T) {
 	require.Equal(t, "xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon", publicKey)
 }
 
-func TestSignMessage(t *testing.T) {
+func TestDeriveKeyAndSign(t *testing.T) {
 	message := sha256.Sum256([]byte("Hello Crypto World"))
 
 	privateKeySeed, err := hex.DecodeString("fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542")
@@ -65,7 +65,7 @@ func TestSignMessage(t *testing.T) {
 
 	derivationPath := "m/0/2147483647'/1"
 
-	signedMessage, err := SignMessage(privateKeySeed, Mainnet, message[:], derivationPath, false, nil, nil)
+	signedMessage, err := DeriveKeyAndSign(privateKeySeed, Mainnet, message[:], derivationPath, false, nil, nil)
 	require.NoError(t, err, "Failed to sign message")
 	require.Equal(t, "fagpGOb9o/E8g62yL6jV5wtpTVzJ7R4rh0Xt2Uw4fPVd1Q+2ZJbkSrRBRj0bvk1qTSiCvoiCfD5CMEHZL4fAlA==", base64.StdEncoding.EncodeToString(signedMessage))
 }
