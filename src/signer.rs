@@ -1,12 +1,12 @@
 use std::fmt;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use bitcoin::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::secp256k1::ecdh::SharedSecret;
 use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::hashes::sha256;
 use bitcoin::secp256k1::{Message, PublicKey, Scalar, Secp256k1, SecretKey};
-use bitcoin::Network;
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
 use wasm_bindgen::prelude::*;
@@ -20,6 +20,14 @@ pub enum LightsparkSignerError {
     TweakMustHaveBoth,
     KeyTweakError,
     EntropyLengthError,
+}
+
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug)]
+pub enum Network {
+    Bitcoin,
+    Testnet,
+    Regtest,
 }
 
 impl fmt::Display for LightsparkSignerError {
@@ -97,16 +105,10 @@ impl Seed {
 }
 
 #[wasm_bindgen]
-pub struct LightsparkSigner {
-    master_private_key: ExtendedPrivKey,
-    node_private_key: ExtendedPrivKey,
-}
-
-#[wasm_bindgen]
 #[derive(Clone)]
 pub struct InvoiceSignature {
     signature: Vec<u8>,
-    pub recovery_id: i32,
+    recovery_id: i32,
 }
 
 #[wasm_bindgen]
@@ -114,13 +116,28 @@ impl InvoiceSignature {
     pub fn get_signature(&self) -> Vec<u8> {
         self.signature.clone()
     }
+
+    pub fn get_recovery_id(&self) -> i32 {
+        self.recovery_id
+    }
+}
+
+#[wasm_bindgen]
+pub struct LightsparkSigner {
+    master_private_key: ExtendedPrivKey,
+    node_private_key: ExtendedPrivKey,
 }
 
 #[wasm_bindgen]
 impl LightsparkSigner {
-    pub fn new(seed: &Seed) -> Self {
+    pub fn new(seed: &Seed, network: Network) -> Self {
+        let network: bitcoin::Network = match network {
+            Network::Bitcoin => bitcoin::Network::Bitcoin,
+            Network::Testnet => bitcoin::Network::Testnet,
+            Network::Regtest => bitcoin::Network::Regtest,
+        };
         let master_private_key =
-            ExtendedPrivKey::new_master(Network::Bitcoin, seed.as_bytes().as_slice()).unwrap();
+            ExtendedPrivKey::new_master(network, seed.as_bytes().as_slice()).unwrap();
         let secp = Secp256k1::new();
         let node_key_path = DerivationPath::from_str(NODE_KEY_PATH).unwrap();
         let node_private_key = master_private_key
@@ -132,9 +149,9 @@ impl LightsparkSigner {
         }
     }
 
-    pub fn from_bytes(seed: Vec<u8>) -> Self {
+    pub fn from_bytes(seed: Vec<u8>, network: Network) -> Self {
         let seed = Seed::new(seed.clone());
-        Self::new(&seed)
+        Self::new(&seed, network)
     }
 
     pub fn get_master_public_key(&self) -> Result<String, LightsparkSignerError> {
@@ -183,40 +200,6 @@ impl LightsparkSigner {
         let our_key = self.node_private_key.private_key;
         let ss = SharedSecret::new(&pubkey, &our_key);
         Ok(ss.as_ref().to_vec())
-    }
-
-    pub fn sign_invoice(
-        &self,
-        unsigned_invoice: String,
-    ) -> Result<InvoiceSignature, LightsparkSignerError> {
-        let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_hashed_data::<sha256::Hash>(unsigned_invoice.as_bytes());
-        let secp = Secp256k1::new();
-        let sig = secp
-            .sign_ecdsa_recoverable(&msg, &signing_key)
-            .serialize_compact();
-        let res = InvoiceSignature {
-            signature: sig.1.to_vec(),
-            recovery_id: sig.0.to_i32(),
-        };
-        Ok(res)
-    }
-
-    pub fn sign_invoice_hash(
-        &self,
-        invoice_hash: Vec<u8>,
-    ) -> Result<InvoiceSignature, LightsparkSignerError> {
-        let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice()).unwrap();
-        let secp = Secp256k1::new();
-        let sig = secp
-            .sign_ecdsa_recoverable(&msg, &signing_key)
-            .serialize_compact();
-        let res = InvoiceSignature {
-            signature: sig.1.to_vec(),
-            recovery_id: sig.0.to_i32(),
-        };
-        Ok(res)
     }
 
     pub fn get_per_commitment_point(
@@ -308,6 +291,42 @@ impl LightsparkSigner {
     }
 }
 
+impl LightsparkSigner {
+    pub fn sign_invoice(
+        &self,
+        unsigned_invoice: String,
+    ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
+        let signing_key = self.node_private_key.private_key;
+        let msg = Message::from_hashed_data::<sha256::Hash>(unsigned_invoice.as_bytes());
+        let secp = Secp256k1::new();
+        let sig = secp
+            .sign_ecdsa_recoverable(&msg, &signing_key)
+            .serialize_compact();
+        let res = InvoiceSignature {
+            signature: sig.1.to_vec(),
+            recovery_id: sig.0.to_i32(),
+        };
+        Ok(res.into())
+    }
+
+    pub fn sign_invoice_hash(
+        &self,
+        invoice_hash: Vec<u8>,
+    ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
+        let signing_key = self.node_private_key.private_key;
+        let msg = Message::from_slice(invoice_hash.as_slice()).unwrap();
+        let secp = Secp256k1::new();
+        let sig = secp
+            .sign_ecdsa_recoverable(&msg, &signing_key)
+            .serialize_compact();
+        let res = InvoiceSignature {
+            signature: sig.1.to_vec(),
+            recovery_id: sig.0.to_i32(),
+        };
+        Ok(res.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,13 +338,13 @@ mod tests {
         let seed_bytes = hex::decode(seed_hex_string).unwrap();
         let seed = Seed::new(seed_bytes);
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let xprv = signer.derive_key("m".to_owned()).unwrap();
         let xprv_string = xprv.to_string();
         let expected_string = "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi";
         assert_eq!(xprv_string.as_str(), expected_string);
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let xprv = signer.derive_key("m/0'".to_owned()).unwrap();
         let xprv_string = xprv.to_string();
         let expected_string = "xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7";
@@ -338,12 +357,12 @@ mod tests {
         let seed_bytes = hex::decode(seed_hex_string).unwrap();
         let seed = Seed::new(seed_bytes);
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let public_key_string = signer.get_master_public_key().unwrap();
         let expected_string = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
         assert_eq!(public_key_string, expected_string);
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let public_key_string = signer.derive_public_key("m/0'".to_owned()).unwrap();
         let expected_string = "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw";
         assert_eq!(public_key_string, expected_string);
@@ -357,7 +376,7 @@ mod tests {
 
         let public_key_string = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let xpub = signer.derive_public_key("m".to_owned()).unwrap();
         assert_eq!(xpub, public_key_string);
 
@@ -387,12 +406,12 @@ mod tests {
         let seed2_bytes = hex::decode(seed2_hex_string).unwrap();
         let seed2 = Seed::new(seed2_bytes);
 
-        let signer1 = LightsparkSigner::new(&seed1);
+        let signer1 = LightsparkSigner::new(&seed1, Network::Bitcoin);
         let pub1 = signer1.derive_public_key("m/0".to_owned()).unwrap();
         let xpub1 = ExtendedPubKey::from_str(&pub1).unwrap();
         let pub1_bytes = xpub1.public_key.serialize();
 
-        let signer2 = LightsparkSigner::new(&seed2);
+        let signer2 = LightsparkSigner::new(&seed2, Network::Bitcoin);
         let pub2 = signer2.derive_public_key("m/0".to_owned()).unwrap();
         let xpub2 = ExtendedPubKey::from_str(&pub2).unwrap();
         let pub2_bytes = xpub2.public_key.serialize();
@@ -418,7 +437,7 @@ mod tests {
         let seed_bytes = hex::decode(seed_hex_string).unwrap();
         let seed = Seed::new(seed_bytes);
 
-        let signer = LightsparkSigner::new(&seed);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let key = signer
             .tweak_key(
                 secrect_key,
