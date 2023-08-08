@@ -327,6 +327,43 @@ impl LightsparkSigner {
     }
 }
 
+#[wasm_bindgen]
+impl LightsparkSigner {
+    pub fn sign_invoice_wasm(
+        &self,
+        unsigned_invoice: String,
+    ) -> Result<InvoiceSignature, LightsparkSignerError> {
+        let signing_key = self.node_private_key.private_key;
+        let msg = Message::from_hashed_data::<sha256::Hash>(unsigned_invoice.as_bytes());
+        let secp = Secp256k1::new();
+        let sig = secp
+            .sign_ecdsa_recoverable(&msg, &signing_key)
+            .serialize_compact();
+        let res = InvoiceSignature {
+            signature: sig.1.to_vec(),
+            recovery_id: sig.0.to_i32(),
+        };
+        Ok(res.into())
+    }
+
+    pub fn sign_invoice_hash_wasm(
+        &self,
+        invoice_hash: Vec<u8>,
+    ) -> Result<InvoiceSignature, LightsparkSignerError> {
+        let signing_key = self.node_private_key.private_key;
+        let msg = Message::from_slice(invoice_hash.as_slice()).unwrap();
+        let secp = Secp256k1::new();
+        let sig = secp
+            .sign_ecdsa_recoverable(&msg, &signing_key)
+            .serialize_compact();
+        let res = InvoiceSignature {
+            signature: sig.1.to_vec(),
+            recovery_id: sig.0.to_i32(),
+        };
+        Ok(res.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
