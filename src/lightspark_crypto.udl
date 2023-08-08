@@ -9,6 +9,12 @@ enum LightsparkSignerError {
   "EntropyLengthError",
 };
 
+enum Network {
+    "Bitcoin",
+    "Testnet",
+    "Regtest",
+};
+
 interface Mnemonic {
     constructor();
 
@@ -30,11 +36,16 @@ interface Seed {
     sequence<u8> as_bytes();
 };
 
+interface InvoiceSignature {
+    i32 get_recovery_id();
+    sequence<u8> get_signature();
+};
+
 interface LightsparkSigner {
-    constructor([ByRef] Seed seed);
+    constructor([ByRef] Seed seed, Network network);
 
     [Name="from_bytes"]
-    constructor(sequence<u8> seed);
+    constructor(sequence<u8> seed, Network network);
 
     [Throws=LightsparkSignerError]
     string get_master_public_key();
@@ -43,18 +54,26 @@ interface LightsparkSigner {
     string derive_public_key(string derivation_path);
 
     [Throws=LightsparkSignerError]
-    sequence<u8> ecdh(string public_key);
+    sequence<u8> ecdh(sequence<u8> public_key);
 
-    sequence<u8> sign_invoice(string unsigned_invoice);
+    [Throws=LightsparkSignerError]
+    InvoiceSignature sign_invoice(string unsigned_invoice);
+
+    [Throws=LightsparkSignerError]
+    InvoiceSignature sign_invoice_hash(sequence<u8> unsigned_invoice);
 
     [Throws=LightsparkSignerError]
     sequence<u8> derive_key_and_sign(
         sequence<u8> message,
         string derivation_path,
+        boolean is_raw,
         sequence<u8>? add_tweak,
         sequence<u8>? mul_tweak
     );
 
-    sequence<u8> get_per_commitment_point(u64 channdl_id, u64 per_commitment_point_idx);
-    sequence<u8> build_commitment_secret(u64 channdl_id, u64 per_commitment_point_idx);
+    [Throws=LightsparkSignerError]
+    sequence<u8> get_per_commitment_point(string derivation_path, u64 per_commitment_point_idx);
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> release_per_commitment_secret(string derivation_path, u64 per_commitment_point_idx);
 };
