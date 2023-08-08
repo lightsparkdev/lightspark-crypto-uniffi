@@ -1,6 +1,6 @@
 package lightspark_crypto
 
-// TODO(mhr): Add support for other OS.
+// TODO(mhr): Dynamic linking?
 
 // #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libs/darwin/amd64 -llightspark_crypto
 // #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libs/darwin/arm64 -llightspark_crypto
@@ -71,8 +71,8 @@ func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, 
 }
 
 type SignedInvoice struct {
-	RecoveryId int32
-	Signature  []byte
+	recoveryId int32
+	signature  []byte
 }
 
 func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice string) (*SignedInvoice, error) {
@@ -87,8 +87,8 @@ func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice strin
 	defer signature.Destroy()
 
 	return &SignedInvoice{
-		RecoveryId: signature.GetRecoveryId(),
-		Signature:  signature.GetSignature(),
+		recoveryId: signature.GetRecoveryId(),
+		signature:  signature.GetSignature(),
 	}, nil
 }
 
@@ -104,8 +104,8 @@ func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice [
 	defer signature.Destroy()
 
 	return &SignedInvoice{
-		RecoveryId: signature.GetRecoveryId(),
-		Signature:  signature.GetSignature(),
+		recoveryId: signature.GetRecoveryId(),
+		signature:  signature.GetSignature(),
 	}, nil
 }
 
