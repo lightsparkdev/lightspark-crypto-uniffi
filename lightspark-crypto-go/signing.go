@@ -1,6 +1,6 @@
 package lightspark_crypto
 
-// TODO(mhr): Add support for other OS.
+// TODO(mhr): Dynamic linking?
 
 // #cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/libs/darwin/amd64 -llightspark_crypto
 // #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/libs/darwin/arm64 -llightspark_crypto
