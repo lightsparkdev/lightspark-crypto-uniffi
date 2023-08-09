@@ -234,18 +234,18 @@ impl LightsparkSigner {
         nonce.to_vec()
     }
 
-    pub fn generate_preimage(&self, nonce: Vec<u8>) -> Vec<u8> {
-        let key = self.derive_key("m/4h".to_owned()).unwrap();
+    pub fn generate_preimage(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
+        let key = self.derive_key("m/4h".to_owned())?;
         let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(&key.private_key.secret_bytes());
         hmac_engine.input(b"invoice preimage");
         hmac_engine.input(nonce.as_slice());
         let hmac_result: Hmac<sha512::Hash> = Hmac::from_engine(hmac_engine);
-        return hmac_result[..32].into();
+        Ok(hmac_result[..32].into())
     }
 
-    pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Vec<u8> {
-        let preimage = self.generate_preimage(nonce);
-        Sha256::digest(&preimage).to_vec()
+    pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
+        let preimage = self.generate_preimage(nonce)?;
+        Ok(Sha256::digest(&preimage).to_vec())
     }
 
     fn derive_and_tweak_key(
@@ -266,7 +266,7 @@ impl LightsparkSigner {
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
-    fn derive_key(&self, derivation_path: String) -> Result<ExtendedPrivKey, bip32::Error> {
+    fn derive_key(&self, derivation_path: String) -> Result<ExtendedPrivKey, LightsparkSignerError> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&derivation_path).unwrap();
         let private_key = self.master_private_key.derive_priv(&secp, &path).unwrap();
@@ -518,8 +518,8 @@ mod tests {
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let nonce = signer.get_payment_preimage_nonce();
         let preimage = signer.generate_preimage(nonce.clone());
-        let preimage_hash = Sha256::digest(&preimage).to_vec();
-        let preimage_hash2 = signer.generate_preimage_hash(nonce);
+        let preimage_hash = Sha256::digest(&preimage.unwrap()).to_vec();
+        let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
         assert_eq!(preimage_hash, preimage_hash2);
     }
 }
