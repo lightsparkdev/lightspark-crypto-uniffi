@@ -3,11 +3,12 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use bitcoin::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::hashes::{HmacEngine, sha512, HashEngine, Hmac, Hash};
 use bitcoin::secp256k1::ecdh::SharedSecret;
 use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::hashes::sha256;
 use bitcoin::secp256k1::{Message, PublicKey, Scalar, Secp256k1, SecretKey};
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsError, JsValue};
@@ -226,6 +227,27 @@ impl LightsparkSigner {
         Ok(self.build_commitment_secret(commitment_seed, per_commitment_point_idx))
     }
 
+    pub fn generate_preimage_nonce(&self) -> Vec<u8> {
+        let mut rng = OsRng;
+        let mut nonce = [0u8; 32];
+        rng.fill_bytes(&mut nonce);
+        nonce.to_vec()
+    }
+
+    pub fn generate_preimage(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
+        let key = self.derive_key("m/4h".to_owned())?;
+        let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(&key.private_key.secret_bytes());
+        hmac_engine.input(b"invoice preimage");
+        hmac_engine.input(nonce.as_slice());
+        let hmac_result: Hmac<sha512::Hash> = Hmac::from_engine(hmac_engine);
+        Ok(hmac_result[..32].into())
+    }
+
+    pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
+        let preimage = self.generate_preimage(nonce)?;
+        Ok(Sha256::digest(&preimage).to_vec())
+    }
+
     fn derive_and_tweak_key(
         &self,
         derivation_path: String,
@@ -244,7 +266,7 @@ impl LightsparkSigner {
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
-    fn derive_key(&self, derivation_path: String) -> Result<ExtendedPrivKey, bip32::Error> {
+    fn derive_key(&self, derivation_path: String) -> Result<ExtendedPrivKey, LightsparkSignerError> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&derivation_path).unwrap();
         let private_key = self.master_private_key.derive_priv(&secp, &path).unwrap();
@@ -485,5 +507,19 @@ mod tests {
 
         let result_hex = "d09ffff62ddb2297ab000cc85bcb4283fdeb6aa052affbc9dddcf33b61078110";
         assert_eq!(format!("{}", key.display_secret()), result_hex);
+    }
+
+    #[test]
+    fn test_preimage() {
+        let seed_hex_string = "000102030405060708090a0b0c0d0e0f";
+        let seed_bytes = hex::decode(seed_hex_string).unwrap();
+        let seed = Seed::new(seed_bytes);
+
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
+        let nonce = signer.generate_preimage_nonce();
+        let preimage = signer.generate_preimage(nonce.clone());
+        let preimage_hash = Sha256::digest(&preimage.unwrap()).to_vec();
+        let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
+        assert_eq!(preimage_hash, preimage_hash2);
     }
 }

@@ -76,4 +76,12 @@ interface LightsparkSigner {
 
     [Throws=LightsparkSignerError]
     sequence<u8> release_per_commitment_secret(string derivation_path, u64 per_commitment_point_idx);
+
+    sequence<u8> generate_preimage_nonce();
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> generate_preimage(sequence<u8> nonce);
+
+    [Throws=LightsparkSignerError]
+    sequence<u8> generate_preimage_hash(sequence<u8> nonce);
 };
