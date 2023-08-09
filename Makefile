@@ -22,10 +22,12 @@ code-gen-kotlin:
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
 build-darwin-amd64:
-	cargo build --profile release-smaller --target x86_64-apple-darwin
+	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop.
+	# cargo build --profile release-smaller --target x86_64-apple-darwin
 
 build-darwin-arm64:
-	cargo build --profile release-smaller --target aarch64-apple-darwin
+	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop.
+	# cargo build --profile release-smaller --target aarch64-apple-darwin
 
 code-gen-go:
 	mkdir -p lightspark-crypto-go/internal
@@ -65,8 +67,8 @@ go-libs: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm
 	mkdir -p lightspark-crypto-go/libs/darwin/arm64
 	mkdir -p lightspark-crypto-go/libs/linux/amd64
 	mkdir -p lightspark-crypto-go/libs/linux/arm64
-	cp target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/amd64
-	cp target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-go/libs/darwin/arm64
+	cp target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/darwin/amd64
+	cp target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/darwin/arm64
 	cp docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/linux/amd64
 	cp docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.a lightspark-crypto-go/libs/linux/arm64
 
