@@ -227,7 +227,7 @@ impl LightsparkSigner {
         Ok(self.build_commitment_secret(commitment_seed, per_commitment_point_idx))
     }
 
-    pub fn get_payment_preimage_nonce(&self) -> Vec<u8> {
+    pub fn generate_preimage_nonce(&self) -> Vec<u8> {
         let mut rng = OsRng;
         let mut nonce = [0u8; 32];
         rng.fill_bytes(&mut nonce);
@@ -516,7 +516,7 @@ mod tests {
         let seed = Seed::new(seed_bytes);
 
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
-        let nonce = signer.get_payment_preimage_nonce();
+        let nonce = signer.generate_preimage_nonce();
         let preimage = signer.generate_preimage(nonce.clone());
         let preimage_hash = Sha256::digest(&preimage.unwrap()).to_vec();
         let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
