@@ -123,22 +123,24 @@ func ReleasePerCommitmentSecret(seedBytes []byte, network BitcoinNetwork, deriva
 	return signer.ReleasePerCommitmentSecret(derivationPath, perCommitmentPointIdx)
 }
 
-func GeneratePreimageNonce(seedBytes []byte, network BitcoinNetwork) []byte {
-	signer := getLightsparkSigner(seedBytes, network)
+func GeneratePreimageNonce(seedBytes []byte) []byte {
+	// Note that the bitcoin network doesn't matter for the preimage stuff because it doesn't actually
+	// have to do with the real node details or seed.
+	signer := getLightsparkSigner(seedBytes, Mainnet)
 	defer signer.Destroy()
 
 	return signer.GeneratePreimageNonce()
 }
 
-func GeneratePreimage(seedBytes []byte, network BitcoinNetwork, nonce []byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+func GeneratePreimage(seedBytes []byte, nonce []byte) ([]byte, error) {
+	signer := getLightsparkSigner(seedBytes, Mainnet)
 	defer signer.Destroy()
 
 	return signer.GeneratePreimage(nonce)
 }
 
-func GeneratePreimageHash(seedBytes []byte, network BitcoinNetwork, nonce []byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+func GeneratePreimageHash(seedBytes []byte, nonce []byte) ([]byte, error) {
+	signer := getLightsparkSigner(seedBytes, Mainnet)
 	defer signer.Destroy()
 
 	return signer.GeneratePreimageHash(nonce)
