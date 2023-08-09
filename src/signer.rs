@@ -227,21 +227,23 @@ impl LightsparkSigner {
         Ok(self.build_commitment_secret(commitment_seed, per_commitment_point_idx))
     }
 
-    pub fn get_payment_preimage_nonce(&self) -> u64 {
+    pub fn get_payment_preimage_nonce(&self) -> Vec<u8> {
         let mut rng = OsRng;
-        rng.next_u64()
+        let mut nonce = [0u8; 32];
+        rng.fill_bytes(&mut nonce);
+        nonce.to_vec()
     }
 
-    pub fn generate_preimage(&self, nonce: u64) -> Vec<u8> {
+    pub fn generate_preimage(&self, nonce: Vec<u8>) -> Vec<u8> {
         let key = self.derive_key("m/4h".to_owned()).unwrap();
         let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(&key.private_key.secret_bytes());
         hmac_engine.input(b"invoice preimage");
-        hmac_engine.input(&nonce.to_be_bytes());
+        hmac_engine.input(nonce.as_slice());
         let hmac_result: Hmac<sha512::Hash> = Hmac::from_engine(hmac_engine);
         return hmac_result[..32].into();
     }
 
-    pub fn generate_preimage_hash(&self, nonce: u64) -> Vec<u8> {
+    pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Vec<u8> {
         let preimage = self.generate_preimage(nonce);
         Sha256::digest(&preimage).to_vec()
     }
@@ -515,7 +517,7 @@ mod tests {
 
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let nonce = signer.get_payment_preimage_nonce();
-        let preimage = signer.generate_preimage(nonce);
+        let preimage = signer.generate_preimage(nonce.clone());
         let preimage_hash = Sha256::digest(&preimage).to_vec();
         let preimage_hash2 = signer.generate_preimage_hash(nonce);
         assert_eq!(preimage_hash, preimage_hash2);
