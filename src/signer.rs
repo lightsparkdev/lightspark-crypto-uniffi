@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use bitcoin::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::hashes::{HmacEngine, sha512, HashEngine, Hmac, Hash};
+use bitcoin::hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::ecdh::SharedSecret;
 use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::hashes::sha256;
@@ -236,7 +236,8 @@ impl LightsparkSigner {
 
     pub fn generate_preimage(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
         let key = self.derive_key("m/4h".to_owned())?;
-        let mut hmac_engine: HmacEngine<sha512::Hash> = HmacEngine::new(&key.private_key.secret_bytes());
+        let mut hmac_engine: HmacEngine<sha512::Hash> =
+            HmacEngine::new(&key.private_key.secret_bytes());
         hmac_engine.input(b"invoice preimage");
         hmac_engine.input(nonce.as_slice());
         let hmac_result: Hmac<sha512::Hash> = Hmac::from_engine(hmac_engine);
@@ -260,7 +261,10 @@ impl LightsparkSigner {
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
-    fn derive_key(&self, derivation_path: String) -> Result<ExtendedPrivKey, LightsparkSignerError> {
+    fn derive_key(
+        &self,
+        derivation_path: String,
+    ) -> Result<ExtendedPrivKey, LightsparkSignerError> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&derivation_path).unwrap();
         let private_key = self.master_private_key.derive_priv(&secp, &path).unwrap();
@@ -518,14 +522,44 @@ mod tests {
     }
 
     #[test]
+    fn test_preimage_with_vectors() {
+        let seed_hex_string = "000102030405060708090a0b0c0d0e0f";
+        let seed_bytes = hex::decode(seed_hex_string).unwrap();
+        let seed = Seed::new(seed_bytes);
+
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
+        assert_eq!(
+            hex::encode(
+                signer
+                    .generate_preimage([0u8; 32].to_vec().clone())
+                    .unwrap()
+            ),
+            "ceb7494bb4dc84e5963a151f26faa2e759379aeb7b8cc9b02cf9753202d39381"
+        );
+
+        assert_eq!(
+            hex::encode(
+                signer
+                    .generate_preimage([1u8; 32].to_vec().clone())
+                    .unwrap()
+            ),
+            "d9a850ee1be830b3af70e88ce8085b5d23a24ca8b1dcb9164a4716f6a8771a85"
+        );
+    }
+
+    #[test]
     fn test_commitment() {
         let seed_hex_string = "000102030405060708090a0b0c0d0e0f";
         let seed_bytes = hex::decode(seed_hex_string).unwrap();
         let seed = Seed::new(seed_bytes);
 
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
-        let commitment_point = signer.get_per_commitment_point("m/3/2104864975".to_owned(), 281474976710654).unwrap();
-        let commitment_secret = signer.release_per_commitment_secret("m/3/2104864975".to_owned(), 281474976710654).unwrap();
+        let commitment_point = signer
+            .get_per_commitment_point("m/3/2104864975".to_owned(), 281474976710654)
+            .unwrap();
+        let commitment_secret = signer
+            .release_per_commitment_secret("m/3/2104864975".to_owned(), 281474976710654)
+            .unwrap();
 
         let secret_key = SecretKey::from_slice(commitment_secret.as_slice()).unwrap();
         let public_key = secret_key.public_key(&Secp256k1::new()).serialize();
