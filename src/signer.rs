@@ -17,10 +17,9 @@ const NODE_KEY_PATH: &str = "m/0";
 
 #[derive(Copy, Clone, Debug)]
 pub enum LightsparkSignerError {
-    Bip32Error(bip32::Error),
-    TweakMustHaveBoth,
-    KeyTweakError,
+    Bip39Error(bip39::Error),
     EntropyLengthError,
+    KeyTweakError,
 }
 
 #[wasm_bindgen]
@@ -34,10 +33,9 @@ pub enum Network {
 impl fmt::Display for LightsparkSignerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Bip32Error(err) => write!(f, "Bip32 error {}", err),
-            Self::TweakMustHaveBoth => write!(f, "Both tweaks must be present"),
-            Self::KeyTweakError => write!(f, "Key tweak error"),
+            Self::Bip39Error(err) => write!(f, "Bip39 error {}", err),
             Self::EntropyLengthError => write!(f, "Entropy must be 32 bytes"),
+            Self::KeyTweakError => write!(f, "Key tweak error"),
         }
     }
 }
@@ -53,14 +51,14 @@ impl From<LightsparkSignerError> for JsValue {
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct Mnemonic {
-    internal: bip32::Mnemonic,
+    internal: bip39::Mnemonic,
 }
 
 #[wasm_bindgen]
 impl Mnemonic {
-    pub fn new() -> Self {
-        let internal = bip32::Mnemonic::random(OsRng, Default::default());
-        Self { internal }
+    pub fn random() -> Result<Mnemonic, LightsparkSignerError> {
+        let internal = bip39::Mnemonic::generate(24).map_err(LightsparkSignerError::Bip39Error)?;
+        Ok(Self { internal })
     }
 
     pub fn from_entropy(entropy: Vec<u8>) -> Result<Mnemonic, LightsparkSignerError> {
@@ -68,18 +66,19 @@ impl Mnemonic {
         let array: [u8; 32] = slice
             .try_into()
             .map_err(|_| LightsparkSignerError::EntropyLengthError)?;
-        let internal = bip32::Mnemonic::from_entropy(array, Default::default());
+        let internal = bip39::Mnemonic::from_entropy(&array)
+            .map_err(LightsparkSignerError::Bip39Error)?;
         Ok(Self { internal })
     }
 
     pub fn from_phrase(phrase: String) -> Result<Mnemonic, LightsparkSignerError> {
-        let internal = bip32::Mnemonic::new(phrase, Default::default())
-            .map_err(LightsparkSignerError::Bip32Error)?;
+        let internal = bip39::Mnemonic::parse_normalized(phrase.as_str())
+            .map_err(LightsparkSignerError::Bip39Error)?;
         Ok(Self { internal })
     }
 
     pub fn as_string(&self) -> String {
-        self.internal.phrase().to_string()
+        self.internal.to_string()
     }
 }
 
@@ -92,7 +91,7 @@ pub struct Seed {
 #[wasm_bindgen]
 impl Seed {
     pub fn from_mnemonic(mnemonic: &Mnemonic) -> Self {
-        let seed = mnemonic.internal.to_seed("").as_bytes().to_vec();
+        let seed = mnemonic.internal.to_seed("").to_vec();
         Self { seed }
     }
 
