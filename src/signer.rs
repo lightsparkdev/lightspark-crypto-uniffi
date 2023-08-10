@@ -44,9 +44,9 @@ impl fmt::Display for LightsparkSignerError {
 
 impl std::error::Error for LightsparkSignerError {}
 
-impl Into<JsValue> for LightsparkSignerError {
-    fn into(self) -> JsValue {
-        JsError::from(self).into()
+impl From<LightsparkSignerError> for JsValue {
+    fn from(val: LightsparkSignerError) -> Self {
+        JsError::from(val).into()
     }
 }
 
@@ -59,7 +59,7 @@ pub struct Mnemonic {
 #[wasm_bindgen]
 impl Mnemonic {
     pub fn new() -> Self {
-        let internal = bip32::Mnemonic::random(&mut OsRng, Default::default());
+        let internal = bip32::Mnemonic::random(OsRng, Default::default());
         Self { internal }
     }
 
@@ -74,7 +74,7 @@ impl Mnemonic {
 
     pub fn from_phrase(phrase: String) -> Result<Mnemonic, LightsparkSignerError> {
         let internal = bip32::Mnemonic::new(phrase, Default::default())
-            .map_err(|e| LightsparkSignerError::Bip32Error(e))?;
+            .map_err(LightsparkSignerError::Bip32Error)?;
         Ok(Self { internal })
     }
 
@@ -151,7 +151,7 @@ impl LightsparkSigner {
     }
 
     pub fn from_bytes(seed: Vec<u8>, network: Network) -> Self {
-        let seed = Seed::new(seed.clone());
+        let seed = Seed::new(seed);
         Self::new(&seed, network)
     }
 
@@ -245,7 +245,7 @@ impl LightsparkSigner {
 
     pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
         let preimage = self.generate_preimage(nonce)?;
-        Ok(Sha256::digest(&preimage).to_vec())
+        Ok(Sha256::digest(preimage).to_vec())
     }
 
     fn derive_and_tweak_key(
@@ -255,14 +255,8 @@ impl LightsparkSigner {
         mul_tweak: Option<Vec<u8>>,
     ) -> Result<SecretKey, LightsparkSignerError> {
         let derived_key = self.derive_key(derivation_path).unwrap();
-        let add_tweak: Option<[u8; 32]> = match add_tweak {
-            Some(tweak) => Some(tweak.try_into().unwrap()),
-            None => None,
-        };
-        let mul_tweak: Option<[u8; 32]> = match mul_tweak {
-            Some(tweak) => Some(tweak.try_into().unwrap()),
-            None => None,
-        };
+        let add_tweak: Option<[u8; 32]> = add_tweak.map(|tweak| tweak.try_into().unwrap());
+        let mul_tweak: Option<[u8; 32]> = mul_tweak.map(|tweak| tweak.try_into().unwrap());
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
@@ -281,7 +275,7 @@ impl LightsparkSigner {
     }
 
     fn build_commitment_secret(&self, seed: Vec<u8>, idx: u64) -> Vec<u8> {
-        let mut res = seed.clone();
+        let mut res = seed;
         for i in 0..48 {
             let bitpos = 47 - i;
             if idx & (1 << bitpos) == (1 << bitpos) {
@@ -298,7 +292,7 @@ impl LightsparkSigner {
         add_tweak: Option<[u8; 32]>,
         mul_tweak: Option<[u8; 32]>,
     ) -> Result<SecretKey, LightsparkSignerError> {
-        let mut res: SecretKey = secret_key.clone();
+        let mut res: SecretKey = secret_key;
         if let Some(mul_tweak) = mul_tweak {
             let scalar = Scalar::from_be_bytes(mul_tweak).unwrap();
             res = res.mul_tweak(&scalar).unwrap();
@@ -365,7 +359,7 @@ impl LightsparkSigner {
             signature: sig.1.to_vec(),
             recovery_id: sig.0.to_i32(),
         };
-        Ok(res.into())
+        Ok(res)
     }
 
     pub fn sign_invoice_hash_wasm(
@@ -382,7 +376,7 @@ impl LightsparkSigner {
             signature: sig.1.to_vec(),
             recovery_id: sig.0.to_i32(),
         };
-        Ok(res.into())
+        Ok(res)
     }
 }
 
@@ -439,7 +433,7 @@ mod tests {
         let xpub = signer.derive_public_key("m".to_owned()).unwrap();
         assert_eq!(xpub, public_key_string);
 
-        let verification_key = ExtendedPubKey::from_str(&public_key_string)
+        let verification_key = ExtendedPubKey::from_str(public_key_string)
             .unwrap()
             .public_key;
 
@@ -518,7 +512,7 @@ mod tests {
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let nonce = signer.generate_preimage_nonce();
         let preimage = signer.generate_preimage(nonce.clone());
-        let preimage_hash = Sha256::digest(&preimage.unwrap()).to_vec();
+        let preimage_hash = Sha256::digest(preimage.unwrap()).to_vec();
         let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
         assert_eq!(preimage_hash, preimage_hash2);
     }
