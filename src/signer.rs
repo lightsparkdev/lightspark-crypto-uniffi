@@ -9,7 +9,6 @@ use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::hashes::sha256;
 use bitcoin::secp256k1::{Message, PublicKey, Scalar, Secp256k1, SecretKey};
 use rand_core::{OsRng, RngCore};
-use sha2::{Digest, Sha256};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsError, JsValue};
 
@@ -221,7 +220,7 @@ impl LightsparkSigner {
         per_commitment_point_idx: u64,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
         let key = self.derive_key(derivation_path).unwrap();
-        let channel_seed = Sha256::digest(&key.private_key[..]).to_vec();
+        let channel_seed = sha256::Hash::hash(&key.private_key[..]).as_byte_array().to_vec();
         let commitment_seed = self.build_commitment_seed(channel_seed);
         Ok(self.build_commitment_secret(commitment_seed, per_commitment_point_idx))
     }
@@ -244,7 +243,7 @@ impl LightsparkSigner {
 
     pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
         let preimage = self.generate_preimage(nonce)?;
-        Ok(Sha256::digest(preimage).to_vec())
+        Ok(sha256::Hash::hash(preimage.as_slice()).as_byte_array().to_vec())
     }
 
     fn derive_and_tweak_key(
@@ -267,10 +266,10 @@ impl LightsparkSigner {
     }
 
     fn build_commitment_seed(&self, seed: Vec<u8>) -> Vec<u8> {
-        let mut hasher = Sha256::new();
-        hasher.update(seed);
-        hasher.update(b"commitment seed");
-        hasher.finalize().to_vec()
+        let mut hasher = sha256::Hash::engine();
+        hasher.input(&seed.as_slice());
+        hasher.input(&b"commitment seed"[..]);
+        sha256::Hash::from_engine(hasher).to_byte_array().to_vec()
     }
 
     fn build_commitment_secret(&self, seed: Vec<u8>, idx: u64) -> Vec<u8> {
@@ -279,7 +278,7 @@ impl LightsparkSigner {
             let bitpos = 47 - i;
             if idx & (1 << bitpos) == (1 << bitpos) {
                 res[bitpos / 8] ^= 1 << (bitpos & 7);
-                res = Sha256::digest(&res).to_vec();
+                res = sha256::Hash::hash(&res).to_byte_array().to_vec();
             }
         }
         res
@@ -511,7 +510,7 @@ mod tests {
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let nonce = signer.generate_preimage_nonce();
         let preimage = signer.generate_preimage(nonce.clone());
-        let preimage_hash = Sha256::digest(preimage.unwrap()).to_vec();
+        let preimage_hash = sha256::Hash::hash(preimage.unwrap().as_slice()).as_byte_array().to_vec();
         let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
         assert_eq!(preimage_hash, preimage_hash2);
     }
