@@ -516,4 +516,19 @@ mod tests {
         let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
         assert_eq!(preimage_hash, preimage_hash2);
     }
+
+    #[test]
+    fn test_commitment() {
+        let seed_hex_string = "000102030405060708090a0b0c0d0e0f";
+        let seed_bytes = hex::decode(seed_hex_string).unwrap();
+        let seed = Seed::new(seed_bytes);
+
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
+        let commitment_point = signer.get_per_commitment_point("m/3/2104864975".to_owned(), 281474976710654).unwrap();
+        let commitment_secret = signer.release_per_commitment_secret("m/3/2104864975".to_owned(), 281474976710654).unwrap();
+
+        let secret_key = SecretKey::from_slice(commitment_secret.as_slice()).unwrap();
+        let public_key = secret_key.public_key(&Secp256k1::new()).serialize();
+        assert_eq!(commitment_point, public_key);
+    }
 }
