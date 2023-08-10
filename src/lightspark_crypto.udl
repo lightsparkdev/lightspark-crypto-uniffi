@@ -3,8 +3,7 @@ namespace lightspark_crypto {
 
 [Error]
 enum LightsparkSignerError {
-  "Bip32Error",
-  "TweakMustHaveBoth",
+  "Bip39Error",
   "KeyTweakError",
   "EntropyLengthError",
 };
@@ -16,6 +15,7 @@ enum Network {
 };
 
 interface Mnemonic {
+    [Name="random", Throws=LightsparkSignerError]
     constructor();
 
     [Name="from_entropy", Throws=LightsparkSignerError]
