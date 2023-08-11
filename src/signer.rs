@@ -65,8 +65,8 @@ impl Mnemonic {
         let array: [u8; 32] = slice
             .try_into()
             .map_err(|_| LightsparkSignerError::EntropyLengthError)?;
-        let internal = bip39::Mnemonic::from_entropy(&array)
-            .map_err(LightsparkSignerError::Bip39Error)?;
+        let internal =
+            bip39::Mnemonic::from_entropy(&array).map_err(LightsparkSignerError::Bip39Error)?;
         Ok(Self { internal })
     }
 
@@ -220,7 +220,9 @@ impl LightsparkSigner {
         per_commitment_point_idx: u64,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
         let key = self.derive_key(derivation_path).unwrap();
-        let channel_seed = sha256::Hash::hash(&key.private_key[..]).as_byte_array().to_vec();
+        let channel_seed = sha256::Hash::hash(&key.private_key[..])
+            .as_byte_array()
+            .to_vec();
         let commitment_seed = self.build_commitment_seed(channel_seed);
         Ok(self.build_commitment_secret(commitment_seed, per_commitment_point_idx))
     }
@@ -244,7 +246,9 @@ impl LightsparkSigner {
 
     pub fn generate_preimage_hash(&self, nonce: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
         let preimage = self.generate_preimage(nonce)?;
-        Ok(sha256::Hash::hash(preimage.as_slice()).as_byte_array().to_vec())
+        Ok(sha256::Hash::hash(preimage.as_slice())
+            .as_byte_array()
+            .to_vec())
     }
 
     fn derive_and_tweak_key(
@@ -254,8 +258,22 @@ impl LightsparkSigner {
         mul_tweak: Option<Vec<u8>>,
     ) -> Result<SecretKey, LightsparkSignerError> {
         let derived_key = self.derive_key(derivation_path).unwrap();
-        let add_tweak: Option<[u8; 32]> = add_tweak.map(|tweak| tweak.try_into().unwrap());
-        let mul_tweak: Option<[u8; 32]> = mul_tweak.map(|tweak| tweak.try_into().unwrap());
+        let add_tweak: Option<[u8; 32]> = add_tweak
+            .filter(|tweak| tweak.len() > 0)
+            .map(|tweak| {
+                tweak
+                    .try_into()
+                    .map_err(|_| LightsparkSignerError::KeyTweakError)
+            })
+            .transpose()?;
+        let mul_tweak: Option<[u8; 32]> = mul_tweak
+            .filter(|tweak| tweak.len() > 0)
+            .map(|tweak| {
+                tweak
+                    .try_into()
+                    .map_err(|_| LightsparkSignerError::KeyTweakError)
+            })
+            .transpose()?;
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
@@ -514,7 +532,9 @@ mod tests {
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
         let nonce = signer.generate_preimage_nonce();
         let preimage = signer.generate_preimage(nonce.clone());
-        let preimage_hash = sha256::Hash::hash(preimage.unwrap().as_slice()).as_byte_array().to_vec();
+        let preimage_hash = sha256::Hash::hash(preimage.unwrap().as_slice())
+            .as_byte_array()
+            .to_vec();
         let preimage_hash2 = signer.generate_preimage_hash(nonce).unwrap();
         assert_eq!(preimage_hash, preimage_hash2);
     }
