@@ -583,4 +583,29 @@ mod tests {
         let public_key = secret_key.public_key(&Secp256k1::new()).serialize();
         assert_eq!(commitment_point, public_key);
     }
+
+    #[test]
+    fn test_derive_and_sign() {
+        let msg = hex::decode("476bdd1db5d91897d00d75300eef50c0da7e0b2dada06dde93cbb5903b7e16b2")
+            .unwrap();
+        let seed_hex_string = "000102030405060708090a0b0c0d0e0f";
+        let seed_bytes = hex::decode(seed_hex_string).unwrap();
+        let seed = Seed::new(seed_bytes);
+        let signer = LightsparkSigner::new(&seed, Network::Bitcoin);
+
+        let signature_bytes = signer
+            .derive_key_and_sign(msg.clone(), "m/3/2106220917/0".to_owned(), true, None, None)
+            .unwrap();
+        let pubkey = signer
+            .derive_public_key("m/3/2106220917/0".to_owned())
+            .unwrap();
+        let verification_key = ExtendedPubKey::from_str(&pubkey).unwrap().public_key;
+
+        let msg = Message::from_slice(&msg).unwrap();
+        let signature = Signature::from_compact(signature_bytes.as_slice()).unwrap();
+        let secp = Secp256k1::new();
+        assert!(secp
+            .verify_ecdsa(&msg, &signature, &verification_key)
+            .is_ok());
+    }
 }
