@@ -45,21 +45,30 @@ func MnemonicToSeed(mnemonic []string) ([]byte, error) {
 }
 
 func Ecdh(seedBytes []byte, network BitcoinNetwork, otherPubKey []byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	return signer.Ecdh(otherPubKey)
 }
 
 func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return "", err
+	}
 	defer signer.Destroy()
 
 	return signer.DerivePublicKey(derivationPath)
 }
 
 func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	signature, err := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
@@ -76,7 +85,10 @@ type SignedInvoice struct {
 }
 
 func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice string) (*SignedInvoice, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	signature, err := signer.SignInvoice(unsignedInvoice)
@@ -93,7 +105,10 @@ func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice strin
 }
 
 func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice []byte) (*SignedInvoice, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	signature, err := signer.SignInvoiceHash(unsignedInvoice)
@@ -110,43 +125,58 @@ func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice [
 }
 
 func GetPerCommitmentPoint(seedBytes []byte, network BitcoinNetwork, derivationPath string, perCommitmentPointIdx uint64) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	return signer.GetPerCommitmentPoint(derivationPath, perCommitmentPointIdx)
 }
 
 func ReleasePerCommitmentSecret(seedBytes []byte, network BitcoinNetwork, derivationPath string, perCommitmentPointIdx uint64) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, network)
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	return signer.ReleasePerCommitmentSecret(derivationPath, perCommitmentPointIdx)
 }
 
-func GeneratePreimageNonce(seedBytes []byte) []byte {
+func GeneratePreimageNonce(seedBytes []byte) ([]byte, error) {
 	// Note that the bitcoin network doesn't matter for the preimage stuff because it doesn't actually
 	// have to do with the real node details or seed.
-	signer := getLightsparkSigner(seedBytes, Mainnet)
+	signer, err := getLightsparkSigner(seedBytes, Mainnet)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
-	return signer.GeneratePreimageNonce()
+	return signer.GeneratePreimageNonce(), nil
 }
 
 func GeneratePreimage(seedBytes []byte, nonce []byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, Mainnet)
+	signer, err := getLightsparkSigner(seedBytes, Mainnet)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	return signer.GeneratePreimage(nonce)
 }
 
 func GeneratePreimageHash(seedBytes []byte, nonce []byte) ([]byte, error) {
-	signer := getLightsparkSigner(seedBytes, Mainnet)
+	signer, err := getLightsparkSigner(seedBytes, Mainnet)
+	if err != nil {
+		return nil, err
+	}
 	defer signer.Destroy()
 
 	return signer.GeneratePreimageHash(nonce)
 }
 
-func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) *internal.LightsparkSigner {
+func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.LightsparkSigner, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
