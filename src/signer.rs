@@ -139,26 +139,24 @@ impl LightsparkSigner {
             Network::Testnet => bitcoin::Network::Testnet,
             Network::Regtest => bitcoin::Network::Regtest,
         };
-        let master_private_key =
-            ExtendedPrivKey::new_master(network, seed.as_bytes().as_slice()).map_err(|_| {
-                LightsparkSignerError::KeyDerivationError
-            })?;
+        let master_private_key = ExtendedPrivKey::new_master(network, seed.as_bytes().as_slice())
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let secp = Secp256k1::new();
-        let node_key_path = DerivationPath::from_str(NODE_KEY_PATH).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
+        let node_key_path = DerivationPath::from_str(NODE_KEY_PATH)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let node_private_key = master_private_key
             .derive_priv(&secp, &node_key_path)
-            .map_err(|_| {
-                LightsparkSignerError::KeyDerivationError
-            })?;
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         Ok(Self {
             master_private_key,
             node_private_key,
         })
     }
 
-    pub fn from_bytes(seed: Vec<u8>, network: Network) -> Result<LightsparkSigner, LightsparkSignerError> {
+    pub fn from_bytes(
+        seed: Vec<u8>,
+        network: Network,
+    ) -> Result<LightsparkSigner, LightsparkSignerError> {
         let seed = Seed::new(seed);
         Self::new(&seed, network)
     }
@@ -174,12 +172,12 @@ impl LightsparkSigner {
         derivation_path: String,
     ) -> Result<String, LightsparkSignerError> {
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&derivation_path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
-        let private_key = self.master_private_key.derive_priv(&secp, &path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
+        let path = DerivationPath::from_str(&derivation_path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
+        let private_key = self
+            .master_private_key
+            .derive_priv(&secp, &path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let pubkey = ExtendedPubKey::from_priv(&secp, &private_key);
         Ok(pubkey.to_string())
     }
@@ -196,9 +194,8 @@ impl LightsparkSigner {
         let signing_key = self.derive_and_tweak_key(derivation_path, add_tweak, mul_tweak)?;
         let signature: Signature = match is_raw {
             true => {
-                let msg = Message::from_slice(message.as_slice()).map_err(|e| {
-                    LightsparkSignerError::Secp256k1Error(e)
-                })?;
+                let msg = Message::from_slice(message.as_slice())
+                    .map_err(LightsparkSignerError::Secp256k1Error)?;
                 secp.sign_ecdsa(&msg, &signing_key)
             }
             false => {
@@ -211,9 +208,8 @@ impl LightsparkSigner {
     }
 
     pub fn ecdh(&self, public_key: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
-        let pubkey = PublicKey::from_slice(public_key.as_slice()).map_err(|e| {
-            LightsparkSignerError::Secp256k1Error(e)
-        })?;
+        let pubkey = PublicKey::from_slice(public_key.as_slice())
+            .map_err(LightsparkSignerError::Secp256k1Error)?;
         let our_key = self.node_private_key.private_key;
         let ss = SharedSecret::new(&pubkey, &our_key);
         Ok(ss.as_ref().to_vec())
@@ -224,11 +220,10 @@ impl LightsparkSigner {
         derivation_path: String,
         per_commitment_point_idx: u64,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
-        let per_commitment_secret = self
-            .release_per_commitment_secret(derivation_path, per_commitment_point_idx)?;
-        let secret_key = SecretKey::from_slice(per_commitment_secret.as_slice()).map_err(|e| {
-            LightsparkSignerError::Secp256k1Error(e)
-        })?;
+        let per_commitment_secret =
+            self.release_per_commitment_secret(derivation_path, per_commitment_point_idx)?;
+        let secret_key = SecretKey::from_slice(per_commitment_secret.as_slice())
+            .map_err(LightsparkSignerError::Secp256k1Error)?;
         let public_key = secret_key.public_key(&Secp256k1::new());
         Ok(public_key.serialize().to_vec())
     }
@@ -238,9 +233,9 @@ impl LightsparkSigner {
         derivation_path: String,
         per_commitment_point_idx: u64,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
-        let key = self.derive_key(derivation_path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
+        let key = self
+            .derive_key(derivation_path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let channel_seed = sha256::Hash::hash(&key.private_key[..])
             .as_byte_array()
             .to_vec();
@@ -278,11 +273,11 @@ impl LightsparkSigner {
         add_tweak: Option<Vec<u8>>,
         mul_tweak: Option<Vec<u8>>,
     ) -> Result<SecretKey, LightsparkSignerError> {
-        let derived_key = self.derive_key(derivation_path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
+        let derived_key = self
+            .derive_key(derivation_path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let add_tweak: Option<[u8; 32]> = add_tweak
-            .filter(|tweak| tweak.len() > 0)
+            .filter(|tweak| !tweak.is_empty())
             .map(|tweak| {
                 tweak
                     .try_into()
@@ -290,7 +285,7 @@ impl LightsparkSigner {
             })
             .transpose()?;
         let mul_tweak: Option<[u8; 32]> = mul_tweak
-            .filter(|tweak| tweak.len() > 0)
+            .filter(|tweak| !tweak.is_empty())
             .map(|tweak| {
                 tweak
                     .try_into()
@@ -305,18 +300,18 @@ impl LightsparkSigner {
         derivation_path: String,
     ) -> Result<ExtendedPrivKey, LightsparkSignerError> {
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&derivation_path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
-        let private_key = self.master_private_key.derive_priv(&secp, &path).map_err(|_| {
-            LightsparkSignerError::KeyDerivationError
-        })?;
+        let path = DerivationPath::from_str(&derivation_path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
+        let private_key = self
+            .master_private_key
+            .derive_priv(&secp, &path)
+            .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         Ok(private_key)
     }
 
     fn build_commitment_seed(&self, seed: Vec<u8>) -> Vec<u8> {
         let mut hasher = sha256::Hash::engine();
-        hasher.input(&seed.as_slice());
+        hasher.input(seed.as_slice());
         hasher.input(&b"commitment seed"[..]);
         sha256::Hash::from_engine(hasher).to_byte_array().to_vec()
     }
@@ -341,21 +336,19 @@ impl LightsparkSigner {
     ) -> Result<SecretKey, LightsparkSignerError> {
         let mut res: SecretKey = secret_key;
         if let Some(mul_tweak) = mul_tweak {
-            let scalar = Scalar::from_be_bytes(mul_tweak).map_err(|_| {
-                LightsparkSignerError::KeyTweakError
-            })?;
-            res = res.mul_tweak(&scalar).map_err(|e| {
-                LightsparkSignerError::Secp256k1Error(e)
-            })?;
+            let scalar = Scalar::from_be_bytes(mul_tweak)
+                .map_err(|_| LightsparkSignerError::KeyTweakError)?;
+            res = res
+                .mul_tweak(&scalar)
+                .map_err(LightsparkSignerError::Secp256k1Error)?;
         }
 
         if let Some(add_tweak) = add_tweak {
-            let scalar = Scalar::from_be_bytes(add_tweak).map_err(|_| {
-                LightsparkSignerError::KeyTweakError
-            })?;
-            res = res.add_tweak(&scalar).map_err(|e| {
-                LightsparkSignerError::Secp256k1Error(e)
-            })?;
+            let scalar = Scalar::from_be_bytes(add_tweak)
+                .map_err(|_| LightsparkSignerError::KeyTweakError)?;
+            res = res
+                .add_tweak(&scalar)
+                .map_err(LightsparkSignerError::Secp256k1Error)?;
         }
 
         Ok(res)
@@ -385,9 +378,8 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice()).map_err(|e| {
-            LightsparkSignerError::Secp256k1Error(e)
-        })?;
+        let msg = Message::from_slice(invoice_hash.as_slice())
+            .map_err(LightsparkSignerError::Secp256k1Error)?;
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
@@ -424,9 +416,8 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<InvoiceSignature, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice()).map_err(|e| {
-            LightsparkSignerError::Secp256k1Error(e)
-        })?;
+        let msg = Message::from_slice(invoice_hash.as_slice())
+            .map_err(LightsparkSignerError::Secp256k1Error)?;
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
@@ -588,7 +579,7 @@ mod tests {
         assert_eq!(
             hex::encode(
                 signer
-                    .generate_preimage([0u8; 32].to_vec().clone())
+                    .generate_preimage([0u8; 32].to_vec())
                     .unwrap()
             ),
             "ceb7494bb4dc84e5963a151f26faa2e759379aeb7b8cc9b02cf9753202d39381"
@@ -597,7 +588,7 @@ mod tests {
         assert_eq!(
             hex::encode(
                 signer
-                    .generate_preimage([1u8; 32].to_vec().clone())
+                    .generate_preimage([1u8; 32].to_vec())
                     .unwrap()
             ),
             "d9a850ee1be830b3af70e88ce8085b5d23a24ca8b1dcb9164a4716f6a8771a85"
