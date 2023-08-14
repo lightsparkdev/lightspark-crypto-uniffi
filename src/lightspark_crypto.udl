@@ -4,6 +4,7 @@ namespace lightspark_crypto {
 [Error]
 enum LightsparkSignerError {
   "Bip39Error",
+  "Secp256k1Error",
   "KeyTweakError",
   "EntropyLengthError",
 };

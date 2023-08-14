@@ -17,6 +17,7 @@ const NODE_KEY_PATH: &str = "m/0";
 #[derive(Copy, Clone, Debug)]
 pub enum LightsparkSignerError {
     Bip39Error(bip39::Error),
+    Secp256k1Error(bitcoin::secp256k1::Error),
     EntropyLengthError,
     KeyTweakError,
 }
@@ -33,6 +34,7 @@ impl fmt::Display for LightsparkSignerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Bip39Error(err) => write!(f, "Bip39 error {}", err),
+            Self::Secp256k1Error(err) => write!(f, "Secp256k1 error {}", err),
             Self::EntropyLengthError => write!(f, "Entropy must be 32 bytes"),
             Self::KeyTweakError => write!(f, "Key tweak error"),
         }
@@ -182,7 +184,9 @@ impl LightsparkSigner {
         let signing_key = self.derive_and_tweak_key(derivation_path, add_tweak, mul_tweak)?;
         let signature: Signature = match is_raw {
             true => {
-                let msg = Message::from_slice(message.as_slice()).unwrap();
+                let msg = Message::from_slice(message.as_slice()).map_err(|e| {
+                    LightsparkSignerError::Secp256k1Error(e)
+                })?;
                 secp.sign_ecdsa(&msg, &signing_key)
             }
             false => {
@@ -195,7 +199,9 @@ impl LightsparkSigner {
     }
 
     pub fn ecdh(&self, public_key: Vec<u8>) -> Result<Vec<u8>, LightsparkSignerError> {
-        let pubkey = PublicKey::from_slice(public_key.as_slice()).unwrap();
+        let pubkey = PublicKey::from_slice(public_key.as_slice()).map_err(|e| {
+            LightsparkSignerError::Secp256k1Error(e)
+        })?;
         let our_key = self.node_private_key.private_key;
         let ss = SharedSecret::new(&pubkey, &our_key);
         Ok(ss.as_ref().to_vec())
@@ -207,9 +213,10 @@ impl LightsparkSigner {
         per_commitment_point_idx: u64,
     ) -> Result<Vec<u8>, LightsparkSignerError> {
         let per_commitment_secret = self
-            .release_per_commitment_secret(derivation_path, per_commitment_point_idx)
-            .unwrap();
-        let secret_key = SecretKey::from_slice(per_commitment_secret.as_slice()).unwrap();
+            .release_per_commitment_secret(derivation_path, per_commitment_point_idx)?;
+        let secret_key = SecretKey::from_slice(per_commitment_secret.as_slice()).map_err(|e| {
+            LightsparkSignerError::Secp256k1Error(e)
+        })?;
         let public_key = secret_key.public_key(&Secp256k1::new());
         Ok(public_key.serialize().to_vec())
     }
@@ -314,13 +321,21 @@ impl LightsparkSigner {
     ) -> Result<SecretKey, LightsparkSignerError> {
         let mut res: SecretKey = secret_key;
         if let Some(mul_tweak) = mul_tweak {
-            let scalar = Scalar::from_be_bytes(mul_tweak).unwrap();
-            res = res.mul_tweak(&scalar).unwrap();
+            let scalar = Scalar::from_be_bytes(mul_tweak).map_err(|_| {
+                LightsparkSignerError::KeyTweakError
+            })?;
+            res = res.mul_tweak(&scalar).map_err(|e| {
+                LightsparkSignerError::Secp256k1Error(e)
+            })?;
         }
 
         if let Some(add_tweak) = add_tweak {
-            let scalar = Scalar::from_be_bytes(add_tweak).unwrap();
-            res = res.add_tweak(&scalar).unwrap();
+            let scalar = Scalar::from_be_bytes(add_tweak).map_err(|_| {
+                LightsparkSignerError::KeyTweakError
+            })?;
+            res = res.add_tweak(&scalar).map_err(|e| {
+                LightsparkSignerError::Secp256k1Error(e)
+            })?;
         }
 
         Ok(res)
@@ -350,7 +365,9 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice()).unwrap();
+        let msg = Message::from_slice(invoice_hash.as_slice()).map_err(|e| {
+            LightsparkSignerError::Secp256k1Error(e)
+        })?;
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
@@ -387,7 +404,9 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<InvoiceSignature, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice()).unwrap();
+        let msg = Message::from_slice(invoice_hash.as_slice()).map_err(|e| {
+            LightsparkSignerError::Secp256k1Error(e)
+        })?;
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
