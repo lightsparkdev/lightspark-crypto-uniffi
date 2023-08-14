@@ -5,6 +5,7 @@ namespace lightspark_crypto {
 enum LightsparkSignerError {
   "Bip39Error",
   "Secp256k1Error",
+  "KeyDerivationError",
   "KeyTweakError",
   "EntropyLengthError",
 };
@@ -43,9 +44,10 @@ interface InvoiceSignature {
 };
 
 interface LightsparkSigner {
+    [Throws=LightsparkSignerError]
     constructor([ByRef] Seed seed, Network network);
 
-    [Name="from_bytes"]
+    [Name="from_bytes", Throws=LightsparkSignerError]
     constructor(sequence<u8> seed, Network network);
 
     [Throws=LightsparkSignerError]
