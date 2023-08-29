@@ -1,4 +1,21 @@
 namespace lightspark_crypto {
+    [Throws=Error]
+    sequence<u8> sign_ecdsa(sequence<u8> msg, sequence<u8> private_key_bytes);
+
+    [Throws=Error]
+    boolean verify_ecdsa(sequence<u8> msg, sequence<u8> signature_bytes, sequence<u8> public_key_bytes);
+
+    [Throws=Error]
+    sequence<u8> encrypt_ecies(sequence<u8> msg, sequence<u8> public_key_bytes);
+
+    [Throws=Error]
+    sequence<u8> decrypt_ecies(sequence<u8> cipher_text, sequence<u8> private_key_bytes);
+};
+
+[Error]
+enum Error {
+  "Secp256k1Error",
+  "RustSecp256k1Error",
 };
 
 [Error]
