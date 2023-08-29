@@ -577,20 +577,12 @@ mod tests {
 
         let signer = LightsparkSigner::new(&seed, Network::Bitcoin).unwrap();
         assert_eq!(
-            hex::encode(
-                signer
-                    .generate_preimage([0u8; 32].to_vec())
-                    .unwrap()
-            ),
+            hex::encode(signer.generate_preimage([0u8; 32].to_vec()).unwrap()),
             "ceb7494bb4dc84e5963a151f26faa2e759379aeb7b8cc9b02cf9753202d39381"
         );
 
         assert_eq!(
-            hex::encode(
-                signer
-                    .generate_preimage([1u8; 32].to_vec())
-                    .unwrap()
-            ),
+            hex::encode(signer.generate_preimage([1u8; 32].to_vec()).unwrap()),
             "d9a850ee1be830b3af70e88ce8085b5d23a24ca8b1dcb9164a4716f6a8771a85"
         );
     }
