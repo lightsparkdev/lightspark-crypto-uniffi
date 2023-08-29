@@ -19,7 +19,7 @@ wasm-bindgen = "0.2.87"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 bitcoin = "0.30.1"
 bip39 = { "version" = "2.0.0", features = ["rand"]}
-ecies = "0.2.6"
+ecies = { "version" = "0.2.6", default-features = false, features = ["pure"]}
 
 [features]
 default = ["uniffi/cli"]
