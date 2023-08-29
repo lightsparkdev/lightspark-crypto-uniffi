@@ -1,4 +1,5 @@
 pub mod signer;
+pub mod crypto;
 
 #[cfg(not(target_arch = "wasm32"))]
 use signer::InvoiceSignature;
