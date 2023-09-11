@@ -79,7 +79,7 @@ build-go: setup-go-targets code-gen-go go-libs
 # Override this in your environment.
 NDK_VERSION ?= 25.2.9519653
 ndk_llvm := $(ANDROID_HOME)/ndk/$(NDK_VERSION)/toolchains/llvm/prebuilt/darwin-x86_64/bin
-export CFLAGS = "-D__ANDROID_MIN_SDK_VERSION__=24"
+export CFLAGS = -D__ANDROID_MIN_SDK_VERSION__=24
 export AR = $(ndk_llvm)/llvm-ar
 export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = $(ndk_llvm)/aarch64-linux-android24-clang
 export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER = $(ndk_llvm)/x86_64-linux-android24-clang
