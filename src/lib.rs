@@ -5,7 +5,7 @@ use crypto::decrypt_ecies;
 use crypto::encrypt_ecies;
 use crypto::sign_ecdsa;
 use crypto::verify_ecdsa;
-use crypto::Error;
+use crypto::CryptoError;
 
 #[cfg(not(target_arch = "wasm32"))]
 use signer::InvoiceSignature;
