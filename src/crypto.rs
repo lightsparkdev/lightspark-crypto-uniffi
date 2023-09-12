@@ -5,6 +5,8 @@ use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use ecies::decrypt;
 use ecies::encrypt;
+use js_sys::Uint8Array;
+use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Error {
@@ -40,6 +42,23 @@ pub fn verify_ecdsa(
     let sig = Signature::from_compact(&signature_bytes).map_err(Error::Secp256k1Error)?;
     let result = secp.verify_ecdsa(&msg, &sig, &pk).is_ok();
     Ok(result)
+}
+
+#[wasm_bindgen]
+pub fn encrypt_ecies_wasm(msg: Uint8Array, public_key_bytes: Uint8Array) -> Uint8Array {
+    let msg_u8 = Vec::with_capacity(msg.length().try_into().unwrap());
+    let public_key_bytes_u8 = Vec::with_capacity(public_key_bytes.length().try_into().unwrap());
+    let result = encrypt_ecies(public_key_bytes_u8, msg_u8);
+    return Uint8Array::from(result.unwrap_throw().as_slice());
+}
+
+#[wasm_bindgen]
+pub fn decrypt_ecies_wasm(cipher_text: Uint8Array, private_key_bytes: Uint8Array) -> Uint8Array {
+    let cipher_text_u8 = Vec::with_capacity(cipher_text.length().try_into().unwrap());
+    let private_key_bytes_u8 = Vec::with_capacity(private_key_bytes.length().try_into().unwrap());
+
+    let result = decrypt_ecies(private_key_bytes_u8, cipher_text_u8);
+    return Uint8Array::from(result.unwrap_throw().as_slice());
 }
 
 pub fn encrypt_ecies(msg: Vec<u8>, public_key_bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
