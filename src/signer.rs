@@ -182,6 +182,11 @@ impl LightsparkSigner {
         Ok(pubkey.to_string())
     }
 
+    pub fn derive_private_key(&self, derivation_path: String) -> Result<String, LightsparkSignerError> {
+        let key = self.derive_key(derivation_path)?;
+        Ok(hex::encode(key.private_key.secret_bytes()))
+    }
+
     pub fn derive_key_and_sign(
         &self,
         message: Vec<u8>,
