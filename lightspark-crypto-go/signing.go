@@ -64,6 +64,16 @@ func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath st
 	return signer.DerivePublicKey(derivationPath)
 }
 
+func DerivePrivateKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
+	signer, err := getLightsparkSigner(seedBytes, network)
+	if err != nil {
+		return "", err
+	}
+	defer signer.Destroy()
+
+	return signer.DerivePrivateKey(derivationPath)
+}
+
 func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
 	signer, err := getLightsparkSigner(seedBytes, network)
 	if err != nil {
