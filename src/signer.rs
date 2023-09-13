@@ -309,6 +309,11 @@ impl LightsparkSigner {
         Ok(private_key)
     }
 
+    pub fn derive_private_key(&self, derivation_path: String) -> Result<String, LightsparkSignerError> {
+        let key = self.derive_key(derivation_path)?;
+        Ok(hex::encode(key.private_key.secret_bytes()))
+    }
+
     fn build_commitment_seed(&self, seed: Vec<u8>) -> Vec<u8> {
         let mut hasher = sha256::Hash::engine();
         hasher.input(seed.as_slice());
