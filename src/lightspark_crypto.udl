@@ -10,6 +10,14 @@ namespace lightspark_crypto {
 
     [Throws=CryptoError]
     sequence<u8> decrypt_ecies(sequence<u8> cipher_text, sequence<u8> private_key_bytes);
+
+    [Throws=CryptoError]
+    KeyPair generate_keypair();
+};
+
+interface KeyPair {
+    sequence<u8> get_public_key();
+    sequence<u8> get_private_key();
 };
 
 [Error]

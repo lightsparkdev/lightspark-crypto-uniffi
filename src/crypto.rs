@@ -1,4 +1,5 @@
 use std::fmt;
+use std::sync::Arc;
 
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::ecdsa::Signature;
@@ -10,6 +11,22 @@ use ecies::encrypt;
 pub enum CryptoError {
     Secp256k1Error(bitcoin::secp256k1::Error),
     RustSecp256k1Error(ecies::SecpError),
+}
+
+#[derive(Clone)]
+pub struct KeyPair {
+    private_key: Vec<u8>,
+    public_key: Vec<u8>,
+}
+
+impl KeyPair {
+    pub fn get_public_key(&self) -> Vec<u8> {
+        self.public_key.clone()
+    }
+
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.private_key.clone()
+    }
 }
 
 impl fmt::Display for CryptoError {
@@ -48,6 +65,15 @@ pub fn encrypt_ecies(msg: Vec<u8>, public_key_bytes: Vec<u8>) -> Result<Vec<u8>,
 
 pub fn decrypt_ecies(cipher_text: Vec<u8>, private_key_bytes: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
     decrypt(&private_key_bytes, &cipher_text).map_err(CryptoError::RustSecp256k1Error)
+}
+
+pub fn generate_keypair() -> Result<Arc<KeyPair>, CryptoError> {
+    let (sk, pk) = ecies::utils::generate_keypair();
+    let keypair = KeyPair{
+        private_key: sk.serialize().to_vec(),
+        public_key: pk.serialize().to_vec(),
+    };
+    return Ok(keypair.into())
 }
 
 #[cfg(test)]
