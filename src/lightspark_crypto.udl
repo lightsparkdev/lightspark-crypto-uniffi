@@ -10,6 +10,14 @@ namespace lightspark_crypto {
 
     [Throws=CryptoError]
     sequence<u8> decrypt_ecies(sequence<u8> cipher_text, sequence<u8> private_key_bytes);
+
+    [Throws=CryptoError]
+    KeyPair generate_keypair();
+};
+
+interface KeyPair {
+    sequence<u8> get_public_key();
+    sequence<u8> get_private_key();
 };
 
 [Error]
@@ -72,6 +80,9 @@ interface LightsparkSigner {
 
     [Throws=LightsparkSignerError]
     string derive_public_key(string derivation_path);
+
+    [Throws=LightsparkSignerError]
+    string derive_private_key(string derivation_path);
 
     [Throws=LightsparkSignerError]
     sequence<u8> ecdh(sequence<u8> public_key);
