@@ -5,10 +5,13 @@ use crypto::decrypt_ecies;
 use crypto::encrypt_ecies;
 use crypto::sign_ecdsa;
 use crypto::verify_ecdsa;
+use crypto::generate_keypair;
 use crypto::CryptoError;
 
 #[cfg(not(target_arch = "wasm32"))]
 use signer::InvoiceSignature;
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::KeyPair;
 #[cfg(not(target_arch = "wasm32"))]
 use signer::LightsparkSigner;
 #[cfg(not(target_arch = "wasm32"))]
