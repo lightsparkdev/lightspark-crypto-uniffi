@@ -56,13 +56,19 @@ setup-xcframework: combine-swift-binaries
 	cp target/lipo-ios-sim/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/ios-arm64_x86_64-simulator/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 	cp target/lipo-macos/release-smaller/liblightspark_crypto.a lightspark-crypto-swift/lightspark_cryptoFFI.xcframework/macos-arm64_x86_64/lightspark_cryptoFFI.framework/lightspark_cryptoFFI
 
-build-linux-amd64:
+build-linux-amd64-static:
 	docker buildx build -f build.Dockerfile --platform linux/amd64 -o docker-out .
 
-build-linux-arm64:
+build-linux-arm64-static:
 	docker buildx build -f build.Dockerfile --platform linux/arm64 -o docker-out .
 
-go-libs: build-darwin-amd64 build-darwin-arm64 build-linux-amd64 build-linux-arm64
+build-linux-amd64-shared:
+	docker buildx build -f build.Dockerfile --build-arg CDYLIB=true --platform linux/amd64 -o docker-out .
+
+build-linux-arm64-shared:
+	docker buildx build -f build.Dockerfile  --build-arg CDYLIB=true --platform linux/arm64 -o docker-out .
+
+go-libs: build-darwin-amd64 build-darwin-arm64 build-linux-amd64-static build-linux-arm64-static
 	mkdir -p lightspark-crypto-go/libs/darwin/amd64
 	mkdir -p lightspark-crypto-go/libs/darwin/arm64
 	mkdir -p lightspark-crypto-go/libs/linux/amd64
@@ -108,13 +114,17 @@ android-libs: build-android-arm64 build-android-x86 build-android-arm7
 
 build-android: setup-android-targets code-gen-kotlin android-libs
 
-build-jvm-targets: setup-jvm-targets build-darwin-amd64 build-darwin-arm64
+build-jvm-targets: setup-jvm-targets build-darwin-amd64 build-darwin-arm64 build-linux-amd64-shared build-linux-arm64-shared
 
 jvm-libs: build-jvm-targets
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64
+	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/linux-x86-64
+	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/linux-aarch64
 	cp -r target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64/libuniffi_lightspark_crypto.dylib
 	cp -r target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64/libuniffi_lightspark_crypto.dylib
+	cp -r docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-x86-64/liblightspark_crypto.so
+	cp -r docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-aarch64/liblightspark_crypto.so
 
 build-jvm: setup-jvm-targets jvm-libs
 
