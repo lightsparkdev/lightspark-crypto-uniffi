@@ -82,6 +82,9 @@ interface LightsparkSigner {
     string derive_public_key(string derivation_path);
 
     [Throws=LightsparkSignerError]
+    string derive_public_key_hex(string derivation_path);
+
+    [Throws=LightsparkSignerError]
     string derive_private_key(string derivation_path);
 
     [Throws=LightsparkSignerError]
