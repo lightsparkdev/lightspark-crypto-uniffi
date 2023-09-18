@@ -309,12 +309,18 @@ impl LightsparkSigner {
         Ok(private_key)
     }
 
-    pub fn derive_private_key(&self, derivation_path: String) -> Result<String, LightsparkSignerError> {
+    pub fn derive_private_key(
+        &self,
+        derivation_path: String,
+    ) -> Result<String, LightsparkSignerError> {
         let key = self.derive_key(derivation_path)?;
         Ok(hex::encode(key.private_key.secret_bytes()))
     }
 
-    pub fn derive_public_key_hex(&self, derivation_path: String) -> Result<String, LightsparkSignerError> {
+    pub fn derive_public_key_hex(
+        &self,
+        derivation_path: String,
+    ) -> Result<String, LightsparkSignerError> {
         let extended_key_string = self.derive_public_key(derivation_path)?;
         let key = ExtendedPubKey::from_str(extended_key_string.as_str()).unwrap();
         Ok(hex::encode(key.to_pub().to_bytes()))

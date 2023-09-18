@@ -63,17 +63,20 @@ pub fn encrypt_ecies(msg: Vec<u8>, public_key_bytes: Vec<u8>) -> Result<Vec<u8>,
     encrypt(&public_key_bytes, &msg).map_err(CryptoError::RustSecp256k1Error)
 }
 
-pub fn decrypt_ecies(cipher_text: Vec<u8>, private_key_bytes: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
+pub fn decrypt_ecies(
+    cipher_text: Vec<u8>,
+    private_key_bytes: Vec<u8>,
+) -> Result<Vec<u8>, CryptoError> {
     decrypt(&private_key_bytes, &cipher_text).map_err(CryptoError::RustSecp256k1Error)
 }
 
 pub fn generate_keypair() -> Result<Arc<KeyPair>, CryptoError> {
     let (sk, pk) = ecies::utils::generate_keypair();
-    let keypair = KeyPair{
+    let keypair = KeyPair {
         private_key: sk.serialize().to_vec(),
         public_key: pk.serialize().to_vec(),
     };
-    return Ok(keypair.into())
+    Ok(keypair.into())
 }
 
 #[cfg(test)]

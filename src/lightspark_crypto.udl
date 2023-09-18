@@ -15,6 +15,11 @@ namespace lightspark_crypto {
     KeyPair generate_keypair();
 };
 
+dictionary RemoteSigningResponse {
+    string query;
+    string variables;
+};
+
 interface KeyPair {
     sequence<u8> get_public_key();
     sequence<u8> get_private_key();
