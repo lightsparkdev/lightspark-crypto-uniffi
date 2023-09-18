@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::fmt;
 
 use lightspark::{error::Error, webhooks::WebhookEvent};
 use lightspark_remote_signing::{
@@ -12,10 +12,21 @@ pub struct RemoteSigningResponse {
     pub variables: String,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum RemoteSigningError {
     WebhookParsingError,
     WebhookSignatureError,
     RemoteSigningHandlerError,
+}
+
+impl fmt::Display for RemoteSigningError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::WebhookParsingError => write!(f, "Webhook parsing error"),
+            Self::WebhookSignatureError => write!(f, "Webhook signature error"),
+            Self::RemoteSigningHandlerError => write!(f, "Remote signing handler error"),
+        }
+    }
 }
 
 pub fn handle_remote_signing_webhook_event(
@@ -24,7 +35,7 @@ pub fn handle_remote_signing_webhook_event(
     webhook_secret: String,
     master_seed_bytes: Vec<u8>,
     validation: Box<dyn Validation>,
-) -> Result<Arc<RemoteSigningResponse>, RemoteSigningError> {
+) -> Result<RemoteSigningResponse, RemoteSigningError> {
     let webhook_event =
         WebhookEvent::verify_and_parse(&webhook_data, &webhook_signature, &webhook_secret)
             .map_err(|e| match e {
@@ -38,12 +49,9 @@ pub fn handle_remote_signing_webhook_event(
     handler
         .handle_remote_signing_webhook_msg(&webhook_event)
         .map_err(|_| RemoteSigningError::RemoteSigningHandlerError)
-        .map(|response| {
-            RemoteSigningResponse {
-                query: response.query,
-                variables: serde_json::to_string(&response.variables)
-                    .expect("serde value to json should not fail"),
-            }
-            .into()
+        .map(|response| RemoteSigningResponse {
+            query: response.query,
+            variables: serde_json::to_string(&response.variables)
+                .expect("serde value to json should not fail"),
         })
 }
