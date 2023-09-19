@@ -42,6 +42,7 @@ interface KeyPair {
 enum RemoteSigningError {
   "WebhookParsingError",
   "WebhookSignatureError",
+  "SignerCreationError",
   "RemoteSigningHandlerError",
 };
 

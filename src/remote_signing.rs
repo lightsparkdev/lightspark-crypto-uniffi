@@ -16,6 +16,7 @@ pub struct RemoteSigningResponse {
 pub enum RemoteSigningError {
     WebhookParsingError,
     WebhookSignatureError,
+    SignerCreationError,
     RemoteSigningHandlerError,
 }
 
@@ -24,6 +25,7 @@ impl fmt::Display for RemoteSigningError {
         match self {
             Self::WebhookParsingError => write!(f, "Webhook parsing error"),
             Self::WebhookSignatureError => write!(f, "Webhook signature error"),
+            Self::SignerCreationError => write!(f, "Signer creation error"),
             Self::RemoteSigningHandlerError => write!(f, "Remote signing handler error"),
         }
     }
@@ -44,7 +46,20 @@ pub fn handle_remote_signing_webhook_event(
             })?;
 
     let seed = Seed::new(master_seed_bytes);
-    let signer = LightsparkSigner::new(&seed, Network::Bitcoin).unwrap();
+    let data = match webhook_event.data {
+        Some(ref data) => data,
+        None => return Err(RemoteSigningError::WebhookParsingError),
+    };
+
+    let network = match data["bitcoin_network"].as_str() {
+        Some("REGTEST") => Network::Regtest,
+        Some("MAINNET") => Network::Bitcoin,
+        Some("TESTNET") => Network::Testnet,
+        _ => return Err(RemoteSigningError::WebhookParsingError),
+    };
+
+    let signer = LightsparkSigner::new(&seed, network)
+        .map_err(|_| RemoteSigningError::SignerCreationError)?;
     let handler = Handler::new(signer, validation);
     handler
         .handle_remote_signing_webhook_msg(&webhook_event)
