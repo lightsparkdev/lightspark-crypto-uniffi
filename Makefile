@@ -123,8 +123,8 @@ jvm-libs: build-jvm-targets
 	mkdir -p lightspark-crypto-kotlin/jniLibs/jvm/linux-aarch64
 	cp -r target/aarch64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-aarch64/libuniffi_lightspark_crypto.dylib
 	cp -r target/x86_64-apple-darwin/release-smaller/liblightspark_crypto.dylib lightspark-crypto-kotlin/jniLibs/jvm/darwin-x86-64/libuniffi_lightspark_crypto.dylib
-	cp -r docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-x86-64/liblightspark_crypto.so
-	cp -r docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-aarch64/liblightspark_crypto.so
+	cp -r docker-out/target/x86_64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-x86-64/libuniffi_lightspark_crypto.so
+	cp -r docker-out/target/aarch64-unknown-linux-gnu/release-smaller/liblightspark_crypto.so lightspark-crypto-kotlin/jniLibs/jvm/linux-aarch64/libuniffi_lightspark_crypto.so
 
 build-jvm: setup-jvm-targets jvm-libs
 
