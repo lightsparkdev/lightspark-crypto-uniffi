@@ -1,4 +1,4 @@
-FROM rust:latest AS build-stage
+FROM rust:buster AS build-stage
 
 ARG TARGETOS TARGETARCH CDYLIB
 RUN echo "$TARGETARCH" | sed 's,arm,aarch,;s,amd,x86_,' > /tmp/arch

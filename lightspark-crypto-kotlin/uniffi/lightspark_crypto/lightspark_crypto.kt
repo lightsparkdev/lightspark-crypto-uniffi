@@ -26,6 +26,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -46,7 +48,7 @@ open class RustBuffer : Structure() {
     companion object {
         internal fun alloc(size: Int = 0) =
             rustCall { status ->
-                _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_rustbuffer_alloc(size, status).also {
+                _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_rustbuffer_alloc(size, status).also {
                     if (it.data == null) {
                         throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=$size)")
                     }
@@ -55,7 +57,7 @@ open class RustBuffer : Structure() {
 
         internal fun free(buf: RustBuffer.ByValue) =
             rustCall { status ->
-                _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_rustbuffer_free(buf, status)
+                _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_rustbuffer_free(buf, status)
             }
     }
 
@@ -270,140 +272,143 @@ internal interface _UniFFILib : Library {
     companion object {
         internal val INSTANCE: _UniFFILib by lazy {
             loadIndirect<_UniFFILib>(componentName = "lightspark_crypto")
+                .also { lib: _UniFFILib ->
+                    FfiConverterTypeValidation.register(lib)
+                }
         }
     }
 
-    fun ffi_lightspark_crypto_44d4_KeyPair_object_free(
+    fun ffi_lightspark_crypto_420_KeyPair_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_44d4_KeyPair_get_public_key(
+    fun lightspark_crypto_420_KeyPair_get_public_key(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_KeyPair_get_private_key(
+    fun lightspark_crypto_420_KeyPair_get_private_key(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_Mnemonic_object_free(
+    fun ffi_lightspark_crypto_420_Mnemonic_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_44d4_Mnemonic_random(_uniffi_out_err: RustCallStatus): Pointer
+    fun lightspark_crypto_420_Mnemonic_random(_uniffi_out_err: RustCallStatus): Pointer
 
-    fun lightspark_crypto_44d4_Mnemonic_from_entropy(
+    fun lightspark_crypto_420_Mnemonic_from_entropy(
         `entropy`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_Mnemonic_from_phrase(
+    fun lightspark_crypto_420_Mnemonic_from_phrase(
         `phrase`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_Mnemonic_as_string(
+    fun lightspark_crypto_420_Mnemonic_as_string(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_Seed_object_free(
+    fun ffi_lightspark_crypto_420_Seed_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_44d4_Seed_new(
+    fun lightspark_crypto_420_Seed_new(
         `seed`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_Seed_from_mnemonic(
+    fun lightspark_crypto_420_Seed_from_mnemonic(
         `mnemonic`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_Seed_as_bytes(
+    fun lightspark_crypto_420_Seed_as_bytes(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_InvoiceSignature_object_free(
+    fun ffi_lightspark_crypto_420_InvoiceSignature_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_44d4_InvoiceSignature_get_recovery_id(
+    fun lightspark_crypto_420_InvoiceSignature_get_recovery_id(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Int
 
-    fun lightspark_crypto_44d4_InvoiceSignature_get_signature(
+    fun lightspark_crypto_420_InvoiceSignature_get_signature(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_LightsparkSigner_object_free(
+    fun ffi_lightspark_crypto_420_LightsparkSigner_object_free(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun lightspark_crypto_44d4_LightsparkSigner_new(
+    fun lightspark_crypto_420_LightsparkSigner_new(
         `seed`: Pointer,
         `network`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_LightsparkSigner_from_bytes(
+    fun lightspark_crypto_420_LightsparkSigner_from_bytes(
         `seed`: RustBuffer.ByValue,
         `network`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_LightsparkSigner_get_master_public_key(
+    fun lightspark_crypto_420_LightsparkSigner_get_master_public_key(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_derive_public_key(
-        `ptr`: Pointer,
-        `derivationPath`: RustBuffer.ByValue,
-        _uniffi_out_err: RustCallStatus,
-    ): RustBuffer.ByValue
-
-    fun lightspark_crypto_44d4_LightsparkSigner_derive_public_key_hex(
+    fun lightspark_crypto_420_LightsparkSigner_derive_public_key(
         `ptr`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_derive_private_key(
+    fun lightspark_crypto_420_LightsparkSigner_derive_public_key_hex(
         `ptr`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_ecdh(
+    fun lightspark_crypto_420_LightsparkSigner_derive_private_key(
+        `ptr`: Pointer,
+        `derivationPath`: RustBuffer.ByValue,
+        _uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun lightspark_crypto_420_LightsparkSigner_ecdh(
         `ptr`: Pointer,
         `publicKey`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_sign_invoice(
+    fun lightspark_crypto_420_LightsparkSigner_sign_invoice(
         `ptr`: Pointer,
         `unsignedInvoice`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_LightsparkSigner_sign_invoice_hash(
+    fun lightspark_crypto_420_LightsparkSigner_sign_invoice_hash(
         `ptr`: Pointer,
         `unsignedInvoice`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Pointer
 
-    fun lightspark_crypto_44d4_LightsparkSigner_derive_key_and_sign(
+    fun lightspark_crypto_420_LightsparkSigner_derive_key_and_sign(
         `ptr`: Pointer,
         `message`: RustBuffer.ByValue,
         `derivationPath`: RustBuffer.ByValue,
@@ -413,80 +418,94 @@ internal interface _UniFFILib : Library {
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_get_per_commitment_point(
+    fun lightspark_crypto_420_LightsparkSigner_get_per_commitment_point(
         `ptr`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
         `perCommitmentPointIdx`: Long,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_release_per_commitment_secret(
+    fun lightspark_crypto_420_LightsparkSigner_release_per_commitment_secret(
         `ptr`: Pointer,
         `derivationPath`: RustBuffer.ByValue,
         `perCommitmentPointIdx`: Long,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_generate_preimage_nonce(
+    fun lightspark_crypto_420_LightsparkSigner_generate_preimage_nonce(
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_LightsparkSigner_generate_preimage(
-        `ptr`: Pointer,
-        `nonce`: RustBuffer.ByValue,
-        _uniffi_out_err: RustCallStatus,
-    ): RustBuffer.ByValue
-
-    fun lightspark_crypto_44d4_LightsparkSigner_generate_preimage_hash(
+    fun lightspark_crypto_420_LightsparkSigner_generate_preimage(
         `ptr`: Pointer,
         `nonce`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_sign_ecdsa(
+    fun lightspark_crypto_420_LightsparkSigner_generate_preimage_hash(
+        `ptr`: Pointer,
+        `nonce`: RustBuffer.ByValue,
+        _uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_lightspark_crypto_420_Validation_init_callback(
+        `callbackStub`: ForeignCallback,
+        _uniffi_out_err: RustCallStatus,
+    ): Unit
+
+    fun lightspark_crypto_420_sign_ecdsa(
         `msg`: RustBuffer.ByValue,
         `privateKeyBytes`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_verify_ecdsa(
+    fun lightspark_crypto_420_verify_ecdsa(
         `msg`: RustBuffer.ByValue,
         `signatureBytes`: RustBuffer.ByValue,
         `publicKeyBytes`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Byte
 
-    fun lightspark_crypto_44d4_encrypt_ecies(
+    fun lightspark_crypto_420_encrypt_ecies(
         `msg`: RustBuffer.ByValue,
         `publicKeyBytes`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_decrypt_ecies(
+    fun lightspark_crypto_420_decrypt_ecies(
         `cipherText`: RustBuffer.ByValue,
         `privateKeyBytes`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun lightspark_crypto_44d4_generate_keypair(_uniffi_out_err: RustCallStatus): Pointer
+    fun lightspark_crypto_420_generate_keypair(_uniffi_out_err: RustCallStatus): Pointer
 
-    fun ffi_lightspark_crypto_44d4_rustbuffer_alloc(
+    fun lightspark_crypto_420_handle_remote_signing_webhook_event(
+        `webhookData`: RustBuffer.ByValue,
+        `webhookSignature`: RustBuffer.ByValue,
+        `webhookSecret`: RustBuffer.ByValue,
+        `masterSeedBytes`: RustBuffer.ByValue,
+        `validation`: Long,
+        _uniffi_out_err: RustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_lightspark_crypto_420_rustbuffer_alloc(
         `size`: Int,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_rustbuffer_from_bytes(
+    fun ffi_lightspark_crypto_420_rustbuffer_from_bytes(
         `bytes`: ForeignBytes.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): RustBuffer.ByValue
 
-    fun ffi_lightspark_crypto_44d4_rustbuffer_free(
+    fun ffi_lightspark_crypto_420_rustbuffer_free(
         `buf`: RustBuffer.ByValue,
         _uniffi_out_err: RustCallStatus,
     ): Unit
 
-    fun ffi_lightspark_crypto_44d4_rustbuffer_reserve(
+    fun ffi_lightspark_crypto_420_rustbuffer_reserve(
         `buf`: RustBuffer.ByValue,
         `additional`: Int,
         _uniffi_out_err: RustCallStatus,
@@ -816,14 +835,14 @@ class InvoiceSignature(
      */
     protected override fun freeRustArcPtr() {
         rustCall { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_InvoiceSignature_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_InvoiceSignature_object_free(this.pointer, status)
         }
     }
 
     override fun `getRecoveryId`(): Int =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_InvoiceSignature_get_recovery_id(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_InvoiceSignature_get_recovery_id(it, _status)
             }
         }.let {
             FfiConverterInt.lift(it)
@@ -832,7 +851,7 @@ class InvoiceSignature(
     override fun `getSignature`(): List<UByte> =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_InvoiceSignature_get_signature(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_InvoiceSignature_get_signature(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -883,14 +902,14 @@ class KeyPair(
      */
     protected override fun freeRustArcPtr() {
         rustCall { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_KeyPair_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_KeyPair_object_free(this.pointer, status)
         }
     }
 
     override fun `getPublicKey`(): List<UByte> =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_KeyPair_get_public_key(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_KeyPair_get_public_key(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -899,7 +918,7 @@ class KeyPair(
     override fun `getPrivateKey`(): List<UByte> =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_KeyPair_get_private_key(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_KeyPair_get_private_key(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -989,7 +1008,7 @@ class LightsparkSigner(
     constructor(`seed`: Seed, `network`: Network) :
         this(
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_new(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_new(
                     FfiConverterTypeSeed.lower(`seed`),
                     FfiConverterTypeNetwork.lower(`network`),
                     _status,
@@ -1007,7 +1026,7 @@ class LightsparkSigner(
      */
     protected override fun freeRustArcPtr() {
         rustCall { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_LightsparkSigner_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_LightsparkSigner_object_free(this.pointer, status)
         }
     }
 
@@ -1017,7 +1036,7 @@ class LightsparkSigner(
     override fun `getMasterPublicKey`(): String =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_get_master_public_key(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_get_master_public_key(it, _status)
             }
         }.let {
             FfiConverterString.lift(it)
@@ -1029,7 +1048,7 @@ class LightsparkSigner(
     override fun `derivePublicKey`(`derivationPath`: String): String =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_derive_public_key(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_derive_public_key(
                     it,
                     FfiConverterString.lower(`derivationPath`),
                     _status,
@@ -1045,7 +1064,7 @@ class LightsparkSigner(
     override fun `derivePublicKeyHex`(`derivationPath`: String): String =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_derive_public_key_hex(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_derive_public_key_hex(
                     it,
                     FfiConverterString.lower(`derivationPath`),
                     _status,
@@ -1061,7 +1080,7 @@ class LightsparkSigner(
     override fun `derivePrivateKey`(`derivationPath`: String): String =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_derive_private_key(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_derive_private_key(
                     it,
                     FfiConverterString.lower(`derivationPath`),
                     _status,
@@ -1077,7 +1096,7 @@ class LightsparkSigner(
     override fun `ecdh`(`publicKey`: List<UByte>): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_ecdh(it, FfiConverterSequenceUByte.lower(`publicKey`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_ecdh(it, FfiConverterSequenceUByte.lower(`publicKey`), _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -1089,7 +1108,7 @@ class LightsparkSigner(
     override fun `signInvoice`(`unsignedInvoice`: String): InvoiceSignature =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_sign_invoice(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_sign_invoice(
                     it,
                     FfiConverterString.lower(`unsignedInvoice`),
                     _status,
@@ -1105,7 +1124,7 @@ class LightsparkSigner(
     override fun `signInvoiceHash`(`unsignedInvoice`: List<UByte>): InvoiceSignature =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_sign_invoice_hash(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_sign_invoice_hash(
                     it,
                     FfiConverterSequenceUByte.lower(`unsignedInvoice`),
                     _status,
@@ -1127,7 +1146,7 @@ class LightsparkSigner(
     ): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_derive_key_and_sign(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_derive_key_and_sign(
                     it,
                     FfiConverterSequenceUByte.lower(`message`),
                     FfiConverterString.lower(`derivationPath`),
@@ -1150,7 +1169,7 @@ class LightsparkSigner(
     ): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_get_per_commitment_point(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_get_per_commitment_point(
                     it,
                     FfiConverterString.lower(`derivationPath`),
                     FfiConverterULong.lower(`perCommitmentPointIdx`),
@@ -1170,7 +1189,7 @@ class LightsparkSigner(
     ): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_release_per_commitment_secret(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_release_per_commitment_secret(
                     it,
                     FfiConverterString.lower(`derivationPath`),
                     FfiConverterULong.lower(`perCommitmentPointIdx`),
@@ -1184,7 +1203,7 @@ class LightsparkSigner(
     override fun `generatePreimageNonce`(): List<UByte> =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_generate_preimage_nonce(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_generate_preimage_nonce(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -1196,7 +1215,7 @@ class LightsparkSigner(
     override fun `generatePreimage`(`nonce`: List<UByte>): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_generate_preimage(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_generate_preimage(
                     it,
                     FfiConverterSequenceUByte.lower(`nonce`),
                     _status,
@@ -1212,7 +1231,7 @@ class LightsparkSigner(
     override fun `generatePreimageHash`(`nonce`: List<UByte>): List<UByte> =
         callWithPointer {
             rustCallWithError(LightsparkSignerException) { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_generate_preimage_hash(
+                _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_generate_preimage_hash(
                     it,
                     FfiConverterSequenceUByte.lower(`nonce`),
                     _status,
@@ -1229,7 +1248,7 @@ class LightsparkSigner(
         ): LightsparkSigner =
             LightsparkSigner(
                 rustCallWithError(LightsparkSignerException) { _status ->
-                    _UniFFILib.INSTANCE.lightspark_crypto_44d4_LightsparkSigner_from_bytes(
+                    _UniFFILib.INSTANCE.lightspark_crypto_420_LightsparkSigner_from_bytes(
                         FfiConverterSequenceUByte.lower(`seed`),
                         FfiConverterTypeNetwork.lower(`network`),
                         _status,
@@ -1281,14 +1300,14 @@ class Mnemonic(
      */
     protected override fun freeRustArcPtr() {
         rustCall { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_Mnemonic_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_Mnemonic_object_free(this.pointer, status)
         }
     }
 
     override fun `asString`(): String =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_Mnemonic_as_string(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_Mnemonic_as_string(it, _status)
             }
         }.let {
             FfiConverterString.lift(it)
@@ -1298,21 +1317,21 @@ class Mnemonic(
         fun `random`(): Mnemonic =
             Mnemonic(
                 rustCallWithError(LightsparkSignerException) { _status ->
-                    _UniFFILib.INSTANCE.lightspark_crypto_44d4_Mnemonic_random(_status)
+                    _UniFFILib.INSTANCE.lightspark_crypto_420_Mnemonic_random(_status)
                 },
             )
 
         fun `fromEntropy`(`entropy`: List<UByte>): Mnemonic =
             Mnemonic(
                 rustCallWithError(LightsparkSignerException) { _status ->
-                    _UniFFILib.INSTANCE.lightspark_crypto_44d4_Mnemonic_from_entropy(FfiConverterSequenceUByte.lower(`entropy`), _status)
+                    _UniFFILib.INSTANCE.lightspark_crypto_420_Mnemonic_from_entropy(FfiConverterSequenceUByte.lower(`entropy`), _status)
                 },
             )
 
         fun `fromPhrase`(`phrase`: String): Mnemonic =
             Mnemonic(
                 rustCallWithError(LightsparkSignerException) { _status ->
-                    _UniFFILib.INSTANCE.lightspark_crypto_44d4_Mnemonic_from_phrase(FfiConverterString.lower(`phrase`), _status)
+                    _UniFFILib.INSTANCE.lightspark_crypto_420_Mnemonic_from_phrase(FfiConverterString.lower(`phrase`), _status)
                 },
             )
     }
@@ -1353,7 +1372,7 @@ class Seed(
     constructor(`seed`: List<UByte>) :
         this(
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_Seed_new(FfiConverterSequenceUByte.lower(`seed`), _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_Seed_new(FfiConverterSequenceUByte.lower(`seed`), _status)
             },
         )
 
@@ -1367,14 +1386,14 @@ class Seed(
      */
     protected override fun freeRustArcPtr() {
         rustCall { status ->
-            _UniFFILib.INSTANCE.ffi_lightspark_crypto_44d4_Seed_object_free(this.pointer, status)
+            _UniFFILib.INSTANCE.ffi_lightspark_crypto_420_Seed_object_free(this.pointer, status)
         }
     }
 
     override fun `asBytes`(): List<UByte> =
         callWithPointer {
             rustCall { _status ->
-                _UniFFILib.INSTANCE.lightspark_crypto_44d4_Seed_as_bytes(it, _status)
+                _UniFFILib.INSTANCE.lightspark_crypto_420_Seed_as_bytes(it, _status)
             }
         }.let {
             FfiConverterSequenceUByte.lift(it)
@@ -1384,7 +1403,7 @@ class Seed(
         fun `fromMnemonic`(`mnemonic`: Mnemonic): Seed =
             Seed(
                 rustCall { _status ->
-                    _UniFFILib.INSTANCE.lightspark_crypto_44d4_Seed_from_mnemonic(FfiConverterTypeMnemonic.lower(`mnemonic`), _status)
+                    _UniFFILib.INSTANCE.lightspark_crypto_420_Seed_from_mnemonic(FfiConverterTypeMnemonic.lower(`mnemonic`), _status)
                 },
             )
     }
@@ -1412,6 +1431,34 @@ public object FfiConverterTypeSeed : FfiConverter<Seed, Pointer> {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+data class RemoteSigningResponse(
+    var `query`: String,
+    var `variables`: String,
+)
+
+public object FfiConverterTypeRemoteSigningResponse : FfiConverterRustBuffer<RemoteSigningResponse> {
+    override fun read(buf: ByteBuffer): RemoteSigningResponse {
+        return RemoteSigningResponse(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RemoteSigningResponse) =
+        (
+            FfiConverterString.allocationSize(value.`query`) +
+                FfiConverterString.allocationSize(value.`variables`)
+        )
+
+    override fun write(
+        value: RemoteSigningResponse,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterString.write(value.`query`, buf)
+        FfiConverterString.write(value.`variables`, buf)
     }
 }
 
@@ -1544,6 +1591,235 @@ public object FfiConverterTypeLightsparkSignerError : FfiConverterRustBuffer<Lig
     }
 }
 
+sealed class RemoteSigningException(message: String) : Exception(message) {
+    // Each variant is a nested class
+    // Flat enums carries a string error message, so no special implementation is necessary.
+    class WebhookParsingException(message: String) : RemoteSigningException(message)
+
+    class WebhookSignatureException(message: String) : RemoteSigningException(message)
+
+    class SignerCreationException(message: String) : RemoteSigningException(message)
+
+    class RemoteSigningHandlerException(message: String) : RemoteSigningException(message)
+
+    companion object ErrorHandler : CallStatusErrorHandler<RemoteSigningException> {
+        override fun lift(error_buf: RustBuffer.ByValue): RemoteSigningException = FfiConverterTypeRemoteSigningError.lift(error_buf)
+    }
+}
+
+public object FfiConverterTypeRemoteSigningError : FfiConverterRustBuffer<RemoteSigningException> {
+    override fun read(buf: ByteBuffer): RemoteSigningException {
+        return when (buf.getInt()) {
+            1 -> RemoteSigningException.WebhookParsingException(FfiConverterString.read(buf))
+            2 -> RemoteSigningException.WebhookSignatureException(FfiConverterString.read(buf))
+            3 -> RemoteSigningException.SignerCreationException(FfiConverterString.read(buf))
+            4 -> RemoteSigningException.RemoteSigningHandlerException(FfiConverterString.read(buf))
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: RemoteSigningException): Int {
+        return 4
+    }
+
+    override fun write(
+        value: RemoteSigningException,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
+            is RemoteSigningException.WebhookParsingException -> {
+                buf.putInt(1)
+                Unit
+            }
+            is RemoteSigningException.WebhookSignatureException -> {
+                buf.putInt(2)
+                Unit
+            }
+            is RemoteSigningException.SignerCreationException -> {
+                buf.putInt(3)
+                Unit
+            }
+            is RemoteSigningException.RemoteSigningHandlerException -> {
+                buf.putInt(4)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+internal typealias Handle = Long
+
+internal class ConcurrentHandleMap<T>(
+    private val leftMap: MutableMap<Handle, T> = mutableMapOf(),
+    private val rightMap: MutableMap<T, Handle> = mutableMapOf(),
+) {
+    private val lock = java.util.concurrent.locks.ReentrantLock()
+    private val currentHandle = AtomicLong(0L)
+    private val stride = 1L
+
+    fun insert(obj: T): Handle =
+        lock.withLock {
+            rightMap[obj]
+                ?: currentHandle.getAndAdd(stride)
+                    .also { handle ->
+                        leftMap[handle] = obj
+                        rightMap[obj] = handle
+                    }
+        }
+
+    fun get(handle: Handle) =
+        lock.withLock {
+            leftMap[handle]
+        }
+
+    fun delete(handle: Handle) {
+        this.remove(handle)
+    }
+
+    fun remove(handle: Handle): T? =
+        lock.withLock {
+            leftMap.remove(handle)?.let { obj ->
+                rightMap.remove(obj)
+                obj
+            }
+        }
+}
+
+interface ForeignCallback : com.sun.jna.Callback {
+    public fun invoke(
+        handle: Handle,
+        method: Int,
+        args: RustBuffer.ByValue,
+        outBuf: RustBufferByReference,
+    ): Int
+}
+
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+internal const val IDX_CALLBACK_FREE = 0
+
+public abstract class FfiConverterCallbackInterface<CallbackInterface>(
+    protected val foreignCallback: ForeignCallback,
+) : FfiConverter<CallbackInterface, Handle> {
+    private val handleMap = ConcurrentHandleMap<CallbackInterface>()
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal abstract fun register(lib: _UniFFILib)
+
+    fun drop(handle: Handle): RustBuffer.ByValue {
+        return handleMap.remove(handle).let { RustBuffer.ByValue() }
+    }
+
+    override fun lift(value: Handle): CallbackInterface {
+        return handleMap.get(value) ?: throw InternalException("No callback in handlemap; this is a Uniffi bug")
+    }
+
+    override fun read(buf: ByteBuffer) = lift(buf.getLong())
+
+    override fun lower(value: CallbackInterface) =
+        handleMap.insert(value).also {
+            assert(
+                handleMap.get(it) === value,
+            ) { "Handle map is not returning the object we just placed there. This is a bug in the HandleMap." }
+        }
+
+    override fun allocationSize(value: CallbackInterface) = 8
+
+    override fun write(
+        value: CallbackInterface,
+        buf: ByteBuffer,
+    ) {
+        buf.putLong(lower(value))
+    }
+}
+
+// Declaration and FfiConverters for Validation Callback Interface
+
+public interface Validation {
+    fun `shouldSign`(`webhook`: String): Boolean
+}
+
+// The ForeignCallback that is passed to Rust.
+internal class ForeignCallbackTypeValidation : ForeignCallback {
+    @Suppress("TooGenericExceptionCaught")
+    override fun invoke(
+        handle: Handle,
+        method: Int,
+        args: RustBuffer.ByValue,
+        outBuf: RustBufferByReference,
+    ): Int {
+        val cb = FfiConverterTypeValidation.lift(handle)
+        return when (method) {
+            IDX_CALLBACK_FREE -> {
+                FfiConverterTypeValidation.drop(handle)
+                // No return value.
+                // See docs of ForeignCallback in `uniffi/src/ffi/foreigncallbacks.rs`
+                0
+            }
+            1 -> {
+                // Call the method, write to outBuf and return a status code
+                // See docs of ForeignCallback in `uniffi/src/ffi/foreigncallbacks.rs` for info
+                try {
+                    val buffer = this.`invokeShouldSign`(cb, args)
+                    // Success
+                    outBuf.setValue(buffer)
+                    1
+                } catch (e: Throwable) {
+                    // Unexpected error
+                    try {
+                        // Try to serialize the error into a string
+                        outBuf.setValue(FfiConverterString.lower(e.toString()))
+                    } catch (e: Throwable) {
+                        // If that fails, then it's time to give up and just return
+                    }
+                    -1
+                }
+            }
+
+            else -> {
+                // An unexpected error happened.
+                // See docs of ForeignCallback in `uniffi/src/ffi/foreigncallbacks.rs`
+                try {
+                    // Try to serialize the error into a string
+                    outBuf.setValue(FfiConverterString.lower("Invalid Callback index"))
+                } catch (e: Throwable) {
+                    // If that fails, then it's time to give up and just return
+                }
+                -1
+            }
+        }
+    }
+
+    private fun `invokeShouldSign`(
+        kotlinCallbackInterface: Validation,
+        args: RustBuffer.ByValue,
+    ): RustBuffer.ByValue =
+        try {
+            val buf = args.asByteBuffer() ?: throw InternalException("No ByteBuffer in RustBuffer; this is a Uniffi bug")
+            kotlinCallbackInterface.`shouldSign`(
+                FfiConverterString.read(buf),
+            )
+                .let {
+                    FfiConverterBoolean.lowerIntoRustBuffer(it)
+                } // TODO catch errors and report them back to Rust.
+            // https://github.com/mozilla/uniffi-rs/issues/351
+        } finally {
+            RustBuffer.free(args)
+        }
+}
+
+// The ffiConverter which transforms the Callbacks in to Handles to pass to Rust.
+public object FfiConverterTypeValidation : FfiConverterCallbackInterface<Validation>(
+    foreignCallback = ForeignCallbackTypeValidation(),
+) {
+    override fun register(lib: _UniFFILib) {
+        rustCall { status ->
+            lib.ffi_lightspark_crypto_420_Validation_init_callback(this.foreignCallback, status)
+        }
+    }
+}
+
 public object FfiConverterOptionalSequenceUByte : FfiConverterRustBuffer<List<UByte>?> {
     override fun read(buf: ByteBuffer): List<UByte>? {
         if (buf.get().toInt() == 0) {
@@ -1605,7 +1881,7 @@ fun `signEcdsa`(
 ): List<UByte> {
     return FfiConverterSequenceUByte.lift(
         rustCallWithError(CryptoException) { _status ->
-            _UniFFILib.INSTANCE.lightspark_crypto_44d4_sign_ecdsa(
+            _UniFFILib.INSTANCE.lightspark_crypto_420_sign_ecdsa(
                 FfiConverterSequenceUByte.lower(`msg`),
                 FfiConverterSequenceUByte.lower(`privateKeyBytes`),
                 _status,
@@ -1622,7 +1898,7 @@ fun `verifyEcdsa`(
 ): Boolean {
     return FfiConverterBoolean.lift(
         rustCallWithError(CryptoException) { _status ->
-            _UniFFILib.INSTANCE.lightspark_crypto_44d4_verify_ecdsa(
+            _UniFFILib.INSTANCE.lightspark_crypto_420_verify_ecdsa(
                 FfiConverterSequenceUByte.lower(`msg`),
                 FfiConverterSequenceUByte.lower(`signatureBytes`),
                 FfiConverterSequenceUByte.lower(`publicKeyBytes`),
@@ -1639,7 +1915,7 @@ fun `encryptEcies`(
 ): List<UByte> {
     return FfiConverterSequenceUByte.lift(
         rustCallWithError(CryptoException) { _status ->
-            _UniFFILib.INSTANCE.lightspark_crypto_44d4_encrypt_ecies(
+            _UniFFILib.INSTANCE.lightspark_crypto_420_encrypt_ecies(
                 FfiConverterSequenceUByte.lower(`msg`),
                 FfiConverterSequenceUByte.lower(`publicKeyBytes`),
                 _status,
@@ -1655,7 +1931,7 @@ fun `decryptEcies`(
 ): List<UByte> {
     return FfiConverterSequenceUByte.lift(
         rustCallWithError(CryptoException) { _status ->
-            _UniFFILib.INSTANCE.lightspark_crypto_44d4_decrypt_ecies(
+            _UniFFILib.INSTANCE.lightspark_crypto_420_decrypt_ecies(
                 FfiConverterSequenceUByte.lower(`cipherText`),
                 FfiConverterSequenceUByte.lower(`privateKeyBytes`),
                 _status,
@@ -1668,7 +1944,29 @@ fun `decryptEcies`(
 fun `generateKeypair`(): KeyPair {
     return FfiConverterTypeKeyPair.lift(
         rustCallWithError(CryptoException) { _status ->
-            _UniFFILib.INSTANCE.lightspark_crypto_44d4_generate_keypair(_status)
+            _UniFFILib.INSTANCE.lightspark_crypto_420_generate_keypair(_status)
+        },
+    )
+}
+
+@Throws(RemoteSigningException::class)
+fun `handleRemoteSigningWebhookEvent`(
+    `webhookData`: List<UByte>,
+    `webhookSignature`: String,
+    `webhookSecret`: String,
+    `masterSeedBytes`: List<UByte>,
+    `validation`: Validation,
+): RemoteSigningResponse {
+    return FfiConverterTypeRemoteSigningResponse.lift(
+        rustCallWithError(RemoteSigningException) { _status ->
+            _UniFFILib.INSTANCE.lightspark_crypto_420_handle_remote_signing_webhook_event(
+                FfiConverterSequenceUByte.lower(`webhookData`),
+                FfiConverterString.lower(`webhookSignature`),
+                FfiConverterString.lower(`webhookSecret`),
+                FfiConverterSequenceUByte.lower(`masterSeedBytes`),
+                FfiConverterTypeValidation.lower(`validation`),
+                _status,
+            )
         },
     )
 }
