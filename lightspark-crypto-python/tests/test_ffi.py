@@ -1,3 +1,4 @@
+import json
 import lightspark_crypto as lsc
 import unittest
 
@@ -15,4 +16,6 @@ class TestFFI(unittest.TestCase):
         seed_bytes = bytes.fromhex(seed)
         validator = Validator()
         res = lsc.handle_remote_signing_webhook_event(data, sig, sec, seed_bytes, validator)
-        assert res is not None
+        variables = json.loads(res.variables)
+        assert variables["node_id"] == "node_with_server_signing:018a9635-3673-88df-0000-827f23051b19"
+        assert variables["shared_secret"] == "85ae1d8a548e2f96667dc8f63e7201ed16fb1bc7248c7aae6ea6fb76d244f74b"
