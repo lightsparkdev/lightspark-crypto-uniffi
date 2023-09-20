@@ -25,6 +25,12 @@ jobs:
 
       - name: "Setup Rust"
         uses: "actions-rust-lang/setup-rust-toolchain@v1"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       
       - name: "Generate py source and binaries"
         run: bash ./scripts/generate-linux.sh
@@ -120,8 +126,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v3
 
-      - name: "Setup Rust"
-        uses: "actions-rust-lang/setup-rust-toolchain@v1"
+      - uses: Swatinem/rust-cache@v2
 
       - uses: actions/setup-python@v4
         with:
