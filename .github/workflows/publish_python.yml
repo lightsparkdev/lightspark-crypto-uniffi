@@ -1,0 +1,161 @@
+name: Publish to PyPI
+on: [workflow_dispatch]
+
+jobs:
+  build-manylinux2014-x86_64-wheels:
+    name: "Build Manylinux 2014 x86_64 wheel"
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    container:
+      image: quay.io/pypa/manylinux2014_x86_64
+      env:
+        PLAT: manylinux2014_x86_64
+        PYBIN: "/opt/python/${{ matrix.python }}/bin"
+    strategy:
+      matrix:
+        python: # Update this list whenever the docker image is updated (check /opt/python/)
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-linux.sh
+
+      - name: "Build wheel"
+        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_x86_64 --verbose
+
+      - name: "Upload artifacts"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
+          path: dist/*.whl
+
+  build-macos-arm64-wheels:
+    name: "Build macOS arm64 wheel"
+    runs-on: macos-13
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    strategy:
+      matrix:
+        python: # Update this list whenever the docker image is updated (check /opt/python/)
+          - "3.8"
+          - "3.9"
+          - "3.10"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: "Install Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-macos-arm64.sh
+
+      - name: "Build wheel"
+        run: python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64 --verbose
+
+      - name: "Upload artifacts"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-macos-arm64-${{ matrix.python }}
+          path: dist/*.whl
+
+  build-macos-x86_64-wheels:
+    name: "Build macOS x86_64 wheel"
+    runs-on: macos-13
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    strategy:
+      matrix:
+        python: # Update this list whenever the docker image is updated (check /opt/python/)
+          - "3.8"
+          - "3.9"
+          - "3.10"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: "Install Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-macos-x86_64.sh
+
+      - name: "Build wheel"
+        run: python3 setup.py bdist_wheel --plat-name macosx_11_0_x86_64 --verbose
+
+      - name: "Upload artifacts"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-macos-x86_64-${{ matrix.python }}
+          path: dist/*.whl
+
+  build-windows-wheels:
+    name: "Build Windows wheel"
+    runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    strategy:
+      matrix:
+        python:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-windows.sh
+
+      - name: "Build wheel"
+        run: python setup.py bdist_wheel --verbose
+
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-win-${{ matrix.python }}
+          path: dist\*.whl
+
+  publish-pypi:
+    name: "Publish on PyPI"
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    needs: [build-manylinux2014-x86_64-wheels, build-macos-arm64-wheels, build-macos-x86_64-wheels, build-windows-wheels]
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+
+      - name: "Download artifacts in dist/ directory"
+        uses: actions/download-artifact@v3
+        with:
+          path: dist/
+
+      - name: "Publish on test PyPI"
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+          packages_dir: dist/*/
