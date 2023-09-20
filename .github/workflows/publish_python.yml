@@ -22,6 +22,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -33,7 +34,7 @@ jobs:
         run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_x86_64 --verbose
 
       - name: "Upload artifacts"
-      - uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
           path: dist/*.whl
@@ -66,7 +67,7 @@ jobs:
         run: python3 setup.py bdist_wheel --plat-name macosx_11_0_arm64 --verbose
 
       - name: "Upload artifacts"
-      - uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-macos-arm64-${{ matrix.python }}
           path: dist/*.whl
@@ -99,7 +100,7 @@ jobs:
         run: python3 setup.py bdist_wheel --plat-name macosx_11_0_x86_64 --verbose
 
       - name: "Upload artifacts"
-      - uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-macos-x86_64-${{ matrix.python }}
           path: dist/*.whl
