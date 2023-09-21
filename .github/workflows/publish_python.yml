@@ -23,8 +23,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: "Setup openssl"
-        run: sudo apt-get install pkg-config libssl-dev
+      - name: "Setup Rust"
+        uses: "actions-rust-lang/setup-rust-toolchain@v1"
+
+      - uses: Swatinem/rust-cache@v2
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -124,8 +126,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v3
 
-      - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - run: vcpkg install openssl:x64-windows-static-md
+      - uses: Swatinem/rust-cache@v2
 
       - uses: actions/setup-python@v4
         with:
