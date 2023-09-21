@@ -1,0 +1,40 @@
+name: Test python build on linux
+on: [workflow_dispatch]
+
+jobs:
+  build-manylinux2014-x86_64-wheels:
+    name: "Build Manylinux 2014 x86_64 wheel"
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    container:
+      image: quay.io/pypa/manylinux2014_x86_64
+      env:
+        PLAT: manylinux2014_x86_64
+        PYBIN: "/opt/python/${{ matrix.python }}/bin"
+    strategy:
+      matrix:
+        python: # Update this list whenever the docker image is updated (check /opt/python/)
+          - cp38-cp38
+          - cp39-cp39
+          - cp310-cp310
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-linux.sh
+
+      - name: "Build wheel"
+        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_x86_64 --verbose
+
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
+          path: dist/*.whl
