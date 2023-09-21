@@ -22,11 +22,11 @@ code-gen-kotlin:
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
 build-darwin-amd64:
-	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop.
+	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop. If you comment out the CC= line instead, this will work.
 	# cargo build --profile release-smaller --target x86_64-apple-darwin
 
 build-darwin-arm64:
-	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop.
+	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop. If you comment out the CC= line instead, this will work.
 	# cargo build --profile release-smaller --target aarch64-apple-darwin
 
 code-gen-go:
