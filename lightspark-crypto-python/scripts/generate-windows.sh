@@ -13,6 +13,6 @@ rustup target add x86_64-pc-windows-msvc
 cargo build --profile release-smaller --target x86_64-pc-windows-msvc
 
 echo "Copying libraries..."
-cp target/x86_64-pc-windows-msvc/release-smaller/lightspark_crypto.dll lightspark-crypto-python/src/lightspark_crypto/ightspark_crypto.dll
+cp target/x86_64-pc-windows-msvc/release-smaller/lightspark_crypto.dll lightspark-crypto-python/src/lightspark_crypto/lightspark_crypto.dll
 
 echo "All done!"
