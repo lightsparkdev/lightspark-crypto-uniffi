@@ -1,3 +1,3 @@
 include ./src/lightspark_crypto/libuniffi_lightspark_crypto.dylib
-include ./src/lightspark_crypto/libuniffi_lightspark_crypto.dll
+include ./src/lightspark_crypto/lightspark_crypto.dll
 include ./src/lightspark_crypto/libuniffi_lightspark_crypto.so
