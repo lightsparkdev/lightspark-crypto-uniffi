@@ -9,7 +9,6 @@ cd ..
 cargo run --bin uniffi-bindgen generate src/lightspark_crypto.udl --language python --out-dir lightspark-crypto-python/src/lightspark_crypto/ --no-format
 
 echo "Generating native binaries..."
-rustup default 1.67.0
 cargo build --profile release-smaller
 
 echo "Copying linux binary..."
