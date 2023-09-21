@@ -16,8 +16,6 @@ jobs:
     strategy:
       matrix:
         python: # Update this list whenever the docker image is updated (check /opt/python/)
-          - cp38-cp38
-          - cp39-cp39
           - cp310-cp310
     steps:
       - name: Checkout
@@ -26,7 +24,10 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      
+
+      - name: cargo tree
+        run: cargo tree
+
       - name: "Generate py source and binaries"
         run: bash ./scripts/generate-linux.sh
 
