@@ -43,7 +43,7 @@ pub fn sign_ecdsa(msg: Vec<u8>, private_key_bytes: Vec<u8>) -> Result<Vec<u8>, C
     let sk = SecretKey::from_slice(&private_key_bytes).map_err(CryptoError::Secp256k1Error)?;
     let msg = Message::from_hashed_data::<sha256::Hash>(&msg);
     let signature = secp.sign_ecdsa(&msg, &sk);
-    Ok(signature.serialize_compact().to_vec())
+    Ok(signature.serialize_der().to_vec())
 }
 
 pub fn verify_ecdsa(
@@ -54,7 +54,7 @@ pub fn verify_ecdsa(
     let secp = Secp256k1::new();
     let pk = PublicKey::from_slice(&public_key_bytes).map_err(CryptoError::Secp256k1Error)?;
     let msg = Message::from_hashed_data::<sha256::Hash>(&msg);
-    let sig = Signature::from_compact(&signature_bytes).map_err(CryptoError::Secp256k1Error)?;
+    let sig = Signature::from_der(&signature_bytes).map_err(CryptoError::Secp256k1Error)?;
     let result = secp.verify_ecdsa(&msg, &sig, &pk).is_ok();
     Ok(result)
 }
