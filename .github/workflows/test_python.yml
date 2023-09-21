@@ -34,7 +34,6 @@ jobs:
       - name: "Build wheel"
         run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_x86_64 --verbose
 
-      - run: ls /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
       - run: pwd
       - run: ls dist
 
