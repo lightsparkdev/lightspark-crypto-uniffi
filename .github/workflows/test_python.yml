@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
-          path: ../dist/*.whl
+          path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
