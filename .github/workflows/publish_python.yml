@@ -124,6 +124,10 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
+          
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
       - name: "Generate py source and binaries"
         run: bash ./scripts/generate-windows.sh
