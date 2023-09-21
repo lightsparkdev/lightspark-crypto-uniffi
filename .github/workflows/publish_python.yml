@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-macos-arm64-${{ matrix.python }}
-          path: /User/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
+          path: /Users/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
 
   build-macos-x86_64-wheels:
     name: "Build macOS x86_64 wheel"
@@ -103,7 +103,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lightspark_crypto_python-macos-x86_64-${{ matrix.python }}
-          path: /User/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
+          path: /Users/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
 
   build-windows-wheels:
     name: "Build Windows wheel"
