@@ -186,6 +186,22 @@ func GeneratePreimageHash(seedBytes []byte, nonce []byte) ([]byte, error) {
 	return signer.GeneratePreimageHash(nonce)
 }
 
+func SignEcdsa(message []byte, privateKey []byte) ([]byte, error) {
+	return internal.SignEcdsa(message, privateKey)
+}
+
+func VerifyEcdsa(message []byte, signature []byte, publicKey []byte) (bool, error) {
+	return internal.VerifyEcdsa(message, signature, publicKey)
+}
+
+func EncryptEcies(message []byte, publicKey []byte) ([]byte, error) {
+	return internal.EncryptEcies(message, publicKey)
+}
+
+func DecryptEcies(message []byte, privateKey []byte) ([]byte, error) {
+	return internal.DecryptEcies(message, privateKey)
+}
+
 func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.LightsparkSigner, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
