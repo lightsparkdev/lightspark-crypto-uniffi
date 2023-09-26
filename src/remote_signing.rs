@@ -81,3 +81,48 @@ pub fn handle_remote_signing_webhook_event(
                 .expect("serde value to json should not fail"),
         })
 }
+
+
+#[wasm_bindgen]
+extern "C" {
+    pub type JsValidation;
+
+    #[wasm_bindgen(structural, method)]
+    pub fn validate(this: &JsValidation, request: String) -> bool;
+}
+
+unsafe impl Send for JsValidation {}
+unsafe impl Sync for JsValidation {}
+
+pub struct WasmValidator {
+    js_validation: JsValidation,
+}
+
+impl WasmValidator {
+    pub fn new(js_validation: JsValidation) -> Self {
+        Self { js_validation }
+    }
+}
+
+impl Validation for WasmValidator {
+    fn should_sign(&self, webhook: String) -> bool {
+        self.js_validation.validate(webhook)
+    }
+}
+
+pub fn wasm_handle_remote_signing_webhook_event(
+    webhook_data: Vec<u8>,
+    webhook_signature: String,
+    webhook_secret: String,
+    master_seed_bytes: Vec<u8>,
+    validation: JsValidation,
+) -> Result<RemoteSigningResponse, RemoteSigningError> {
+    let validator = WasmValidator::new(validation);
+    handle_remote_signing_webhook_event(
+        webhook_data,
+        webhook_signature,
+        webhook_secret,
+        master_seed_bytes,
+        Box::new(validator),
+    )
+}
