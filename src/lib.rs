@@ -2,15 +2,25 @@ pub mod crypto;
 pub mod remote_signing;
 pub mod signer;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::decrypt_ecies;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::encrypt_ecies;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::generate_keypair;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::sign_ecdsa;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::verify_ecdsa;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::CryptoError;
+#[cfg(not(target_arch = "wasm32"))]
 use lightspark_remote_signing::validation::Validation;
+#[cfg(not(target_arch = "wasm32"))]
 use remote_signing::handle_remote_signing_webhook_event;
+#[cfg(not(target_arch = "wasm32"))]
 use remote_signing::RemoteSigningError;
+#[cfg(not(target_arch = "wasm32"))]
 use remote_signing::RemoteSigningResponse;
 
 #[cfg(not(target_arch = "wasm32"))]

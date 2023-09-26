@@ -6,12 +6,15 @@ use lightspark_remote_signing::{
     signer::{LightsparkSigner, Network, Seed},
     validation::Validation,
 };
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsError, JsValue};
 
 pub struct RemoteSigningResponse {
     pub query: String,
     pub variables: String,
 }
 
+#[wasm_bindgen]
 #[derive(Clone, Copy, Debug)]
 pub enum RemoteSigningError {
     WebhookParsingError,
@@ -28,6 +31,14 @@ impl fmt::Display for RemoteSigningError {
             Self::SignerCreationError => write!(f, "Signer creation error"),
             Self::RemoteSigningHandlerError => write!(f, "Remote signing handler error"),
         }
+    }
+}
+
+impl std::error::Error for RemoteSigningError {}
+
+impl From<RemoteSigningError> for JsValue {
+    fn from(val: RemoteSigningError) -> Self {
+        JsError::from(val).into()
     }
 }
 
