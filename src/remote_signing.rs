@@ -115,21 +115,21 @@ pub fn handle_remote_signing_webhook_event(
 
 #[wasm_bindgen]
 extern "C" {
-    pub type JsValidation;
+    pub type WasmValidation;
 
     #[wasm_bindgen(structural, method)]
-    pub fn validate(this: &JsValidation, request: String) -> bool;
+    pub fn validate(this: &WasmValidation, request: String) -> bool;
 }
 
-unsafe impl Send for JsValidation {}
-unsafe impl Sync for JsValidation {}
+unsafe impl Send for WasmValidation {}
+unsafe impl Sync for WasmValidation {}
 
 pub struct WasmValidator {
-    js_validation: JsValidation,
+    js_validation: WasmValidation,
 }
 
 impl WasmValidator {
-    pub fn new(js_validation: JsValidation) -> Self {
+    pub fn new(js_validation: WasmValidation) -> Self {
         Self { js_validation }
     }
 }
@@ -146,9 +146,10 @@ pub fn wasm_handle_remote_signing_webhook_event(
     webhook_signature: String,
     webhook_secret: String,
     master_seed_bytes: Vec<u8>,
-    validation: JsValidation,
+    validation: &WasmValidation,
 ) -> Result<RemoteSigningResponseWasm, RemoteSigningError> {
-    let validator = WasmValidator::new(validation);
+    let validation = (*validation).clone();
+    let validator = WasmValidator::new(WasmValidation { obj: validation });
     handle_remote_signing_webhook_event(
         webhook_data,
         webhook_signature,
