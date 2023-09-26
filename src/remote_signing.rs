@@ -15,6 +15,36 @@ pub struct RemoteSigningResponse {
 }
 
 #[wasm_bindgen]
+#[derive(Clone, Debug)]
+pub struct RemoteSigningResponseWasm {
+    query: String,
+    variables: String,
+}
+
+#[wasm_bindgen]
+impl RemoteSigningResponseWasm {
+    #[wasm_bindgen(getter)]
+    pub fn query(&self) -> String {
+        self.query.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn variables(&self) -> String {
+        self.variables.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_query(&mut self, query: String) {
+        self.query = query;
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_variables(&mut self, variables: String) {
+        self.variables = variables;
+    }
+}
+
+#[wasm_bindgen]
 #[derive(Clone, Copy, Debug)]
 pub enum RemoteSigningError {
     WebhookParsingError,
@@ -110,13 +140,14 @@ impl Validation for WasmValidator {
     }
 }
 
+#[wasm_bindgen]
 pub fn wasm_handle_remote_signing_webhook_event(
     webhook_data: Vec<u8>,
     webhook_signature: String,
     webhook_secret: String,
     master_seed_bytes: Vec<u8>,
     validation: JsValidation,
-) -> Result<RemoteSigningResponse, RemoteSigningError> {
+) -> Result<RemoteSigningResponseWasm, RemoteSigningError> {
     let validator = WasmValidator::new(validation);
     handle_remote_signing_webhook_event(
         webhook_data,
@@ -124,5 +155,8 @@ pub fn wasm_handle_remote_signing_webhook_event(
         webhook_secret,
         master_seed_bytes,
         Box::new(validator),
-    )
+    ).map(|response| RemoteSigningResponseWasm {
+        query: response.query,
+        variables: response.variables,
+    })
 }
