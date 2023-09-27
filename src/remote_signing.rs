@@ -118,7 +118,7 @@ extern "C" {
     pub type WasmValidation;
 
     #[wasm_bindgen(structural, method)]
-    pub fn validate(this: &WasmValidation, request: String) -> bool;
+    pub fn should_sign(this: &WasmValidation, request: String) -> bool;
 }
 
 unsafe impl Send for WasmValidation {}
@@ -136,7 +136,7 @@ impl WasmValidator {
 
 impl Validation for WasmValidator {
     fn should_sign(&self, webhook: String) -> bool {
-        self.js_validation.validate(webhook)
+        self.js_validation.should_sign(webhook)
     }
 }
 
