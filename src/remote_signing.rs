@@ -1,10 +1,10 @@
 use std::fmt;
 
-use lightspark::{error::Error, webhooks::WebhookEvent};
 use lightspark_remote_signing::{
     handler::Handler,
     signer::{LightsparkSigner, Network, Seed},
     validation::Validation,
+    lightspark::{error::Error, webhooks::WebhookEvent},
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsError, JsValue};
