@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: cargo tree
         run: cargo tree
 
