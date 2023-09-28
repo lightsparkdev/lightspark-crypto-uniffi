@@ -2,36 +2,35 @@ name: Test python build on linux
 on: [workflow_dispatch]
 
 jobs:
-  build-manylinux2014-arm64-wheels:
+  build-manylinux2014-x86_64-wheels:
     name: "Build Manylinux 2014 aarch64 wheel"
-    runs-on: macos-13
+    runs-on: ubuntu-20.04
     defaults:
       run:
         working-directory: lightspark-crypto-python
     strategy:
       matrix:
         python: # Update this list whenever the docker image is updated (check /opt/python/)
-          - "3.10"
+          - cp310-cp310
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: "Install Python"
-        uses: actions/setup-python@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          python-version: ${{ matrix.python }}
+          toolchain: stable
 
-      - name: Setup Docker on macOS
-        uses: douglascamata/setup-docker-macos-action@v1-alpha
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: cargo tree
-        run: cargo tree
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: "Generate py source and binaries"
         run: bash ./scripts/generate-linux-arm64.sh
 
       - name: "Build wheel"
-        run: python3 setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
+        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
 
       - run: pwd
       - run: ls dist
