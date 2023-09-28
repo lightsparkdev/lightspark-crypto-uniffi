@@ -8,6 +8,11 @@ jobs:
     defaults:
       run:
         working-directory: lightspark-crypto-python
+    container:
+      image: quay.io/pypa/manylinux2014_x86_64
+      env:
+        PLAT: manylinux2014_x86_64
+        PYBIN: "/opt/python/${{ matrix.python }}/bin"
     strategy:
       matrix:
         python: # Update this list whenever the docker image is updated (check /opt/python/)
