@@ -2,17 +2,12 @@ name: Test python build on linux
 on: [workflow_dispatch]
 
 jobs:
-  build-manylinux2014-x86_64-wheels:
+  build-manylinux2014-arm64-wheels:
     name: "Build Manylinux 2014 aarch64 wheel"
-    runs-on: ubuntu-20.04
+    runs-on: macos-13
     defaults:
       run:
         working-directory: lightspark-crypto-python
-    container:
-      image: quay.io/pypa/manylinux2014_aarch64
-      env:
-        PLAT: manylinux2014_aarch64
-        PYBIN: "/opt/python/${{ matrix.python }}/bin"
     strategy:
       matrix:
         python: # Update this list whenever the docker image is updated (check /opt/python/)
@@ -21,18 +16,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: actions-rs/toolchain@v1
+      - name: "Install Python"
+        uses: actions/setup-python@v4
         with:
-          toolchain: stable
+          python-version: ${{ matrix.python }}
 
       - name: cargo tree
         run: cargo tree
 
       - name: "Generate py source and binaries"
-        run: bash ./scripts/generate-linux.sh
+        run: bash ./scripts/generate-linux-arm64.sh
 
       - name: "Build wheel"
-        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
+        run: python3 setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
 
       - run: pwd
       - run: ls dist
