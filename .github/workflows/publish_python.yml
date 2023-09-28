@@ -40,6 +40,50 @@ jobs:
           name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
           path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
 
+  build-manylinux2014-aarch64-wheels:
+    name: "Build Manylinux 2014 aarch64 wheel"
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: lightspark-crypto-python
+    strategy:
+      matrix:
+        python:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: "Install Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Generate py source and binaries"
+        run: bash ./scripts/generate-linux-arm64.sh
+
+      - name: "Build wheel"
+        run: ${PYBIN}/python setup.py bdist_wheel --plat-name linux_aarch64 --verbose
+
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: lightspark_crypto_python-linux-aarch64-${{ matrix.python }}
+          path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
+
   build-macos-arm64-wheels:
     name: "Build macOS arm64 wheel"
     runs-on: macos-13
@@ -151,7 +195,7 @@ jobs:
     defaults:
       run:
         working-directory: lightspark-crypto-python
-    needs: [build-manylinux2014-x86_64-wheels, build-macos-arm64-wheels, build-macos-x86_64-wheels, build-windows-wheels]
+    needs: [build-manylinux2014-x86_64-wheels, build-manylinux2014-aarch64-wheels, build-macos-arm64-wheels, build-macos-x86_64-wheels, build-windows-wheels]
     steps:
       - name: "Checkout"
         uses: actions/checkout@v3
