@@ -3,15 +3,15 @@ on: [workflow_dispatch]
 
 jobs:
   build-manylinux2014-x86_64-wheels:
-    name: "Build Manylinux 2014 x86_64 wheel"
+    name: "Build Manylinux 2014 aarch64 wheel"
     runs-on: ubuntu-20.04
     defaults:
       run:
         working-directory: lightspark-crypto-python
     container:
-      image: quay.io/pypa/manylinux2014_x86_64
+      image: quay.io/pypa/manylinux2014_aarch64
       env:
-        PLAT: manylinux2014_x86_64
+        PLAT: manylinux2014_aarch64
         PYBIN: "/opt/python/${{ matrix.python }}/bin"
     strategy:
       matrix:
@@ -32,7 +32,7 @@ jobs:
         run: bash ./scripts/generate-linux.sh
 
       - name: "Build wheel"
-        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_x86_64 --verbose
+        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
 
       - run: pwd
       - run: ls dist
@@ -40,5 +40,5 @@ jobs:
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v3
         with:
-          name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
+          name: lightspark_crypto_python-manylinux2014-aarch64-${{ matrix.python }}
           path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
