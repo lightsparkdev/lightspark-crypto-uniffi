@@ -40,7 +40,7 @@ jobs:
           name: lightspark_crypto_python-manylinux2014-x86_64-${{ matrix.python }}
           path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
 
-  build-linux-aarch64-wheels:
+  build-manylinux2014-aarch64-wheels:
     name: "Build linux aarch64 wheel"
     runs-on: ubuntu-20.04
     defaults:
@@ -76,12 +76,12 @@ jobs:
         run: bash ./scripts/generate-linux-arm64.sh
 
       - name: "Build wheel"
-        run: python setup.py bdist_wheel --plat-name linux_aarch64 --verbose
+        run: python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
 
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v3
         with:
-          name: lightspark_crypto_python-linux-aarch64-${{ matrix.python }}
+          name: lightspark_crypto_python-manylinux2014-aarch64-${{ matrix.python }}
           path: /home/runner/work/lightspark-crypto-uniffi/lightspark-crypto-uniffi/lightspark-crypto-python/dist/*.whl
 
   build-macos-arm64-wheels:
