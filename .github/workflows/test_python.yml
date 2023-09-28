@@ -16,6 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: pwd
+        run: pwd
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -35,7 +38,7 @@ jobs:
         run: bash ./scripts/generate-linux-arm64.sh
 
       - name: "Build wheel"
-        run: ${PYBIN}/python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
+        run: python setup.py bdist_wheel --plat-name manylinux_2_17_aarch64 --verbose
 
       - run: pwd
       - run: ls dist
