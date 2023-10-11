@@ -161,3 +161,22 @@ pub fn wasm_handle_remote_signing_webhook_event(
         variables: response.variables,
     })
 }
+
+#[cfg(test)]
+mod test {
+    use lightspark_remote_signing::validation::PositiveValidator;
+
+    use super::handle_remote_signing_webhook_event;
+
+    #[test]
+    fn test_handle_remote_signing() {
+        let webhook_data_string = "{\"event_type\": \"REMOTE_SIGNING\", \"event_id\": \"5053dbd8c5b0453494f1c14e01da69cd\", \"timestamp\": \"2023-09-18T23:50:15.355603+00:00\", \"entity_id\": \"node_with_server_signing:018a9635-3673-88df-0000-827f23051b19\", \"data\": {\"sub_event_type\": \"ECDH\", \"bitcoin_network\": \"REGTEST\", \"peer_public_key\": \"03173d97d0973d596716c8cd14066e20e27f6866ab214fd04d160301615de78f72\"}}";
+        let sig = "a64c69f1266bc1dc1322c3f40eba7ba2d536c714774a4fc04f0938609482f5d9";
+        let sec = "39kyJO140v7fYkwHnR7jz8Y3UphqVeNYQk44Xx049ws";
+        let seed = "1a6deac8f74fb2e332677e3f4833b5e962f80d153fb368b8ee322a9caca4113d56cccd88f1c6a74e152669d8cd373fee2f27e3645d80de27640177a8c71395f8";
+        let master_seed_bytes = hex::decode(seed).unwrap();
+        let validator = Box::new(PositiveValidator);
+        let response = handle_remote_signing_webhook_event(webhook_data_string.as_bytes().to_vec(), sig.to_owned(), sec.to_owned(), master_seed_bytes, validator);
+        assert!(response.is_ok());
+    }
+}
