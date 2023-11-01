@@ -15,7 +15,7 @@ namespace lightspark_crypto {
     KeyPair generate_keypair();
 
     [Throws=RemoteSigningError]
-    RemoteSigningResponse handle_remote_signing_webhook_event(
+    RemoteSigningResponse? handle_remote_signing_webhook_event(
         sequence<u8> webhook_data,
         string webhook_signature,
         string webhook_secret,
