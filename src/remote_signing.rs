@@ -44,7 +44,6 @@ impl RemoteSigningResponseWasm {
     }
 }
 
-#[wasm_bindgen]
 #[derive(Clone, Copy, Debug)]
 pub enum RemoteSigningError {
     WebhookParsingError,
