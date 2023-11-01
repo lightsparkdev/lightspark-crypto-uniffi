@@ -2,9 +2,9 @@ use std::fmt;
 
 use lightspark_remote_signing::{
     handler::Handler,
+    lightspark::{error::Error, webhooks::WebhookEvent},
     signer::{LightsparkSigner, Network, Seed},
     validation::Validation,
-    lightspark::{error::Error, webhooks::WebhookEvent},
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsError, JsValue};
@@ -78,7 +78,7 @@ pub fn handle_remote_signing_webhook_event(
     webhook_secret: String,
     master_seed_bytes: Vec<u8>,
     validation: Box<dyn Validation>,
-) -> Result<RemoteSigningResponse, RemoteSigningError> {
+) -> Result<Option<RemoteSigningResponse>, RemoteSigningError> {
     let webhook_event =
         WebhookEvent::verify_and_parse(&webhook_data, &webhook_signature, &webhook_secret)
             .map_err(|e| match e {
@@ -105,13 +105,15 @@ pub fn handle_remote_signing_webhook_event(
     handler
         .handle_remote_signing_webhook_msg(&webhook_event)
         .map_err(|_| RemoteSigningError::RemoteSigningHandlerError)
-        .map(|response| RemoteSigningResponse {
-            query: response.query,
-            variables: serde_json::to_string(&response.variables)
-                .expect("serde value to json should not fail"),
+        .map(|response| match response {
+            None => None,
+            Some(response) => Some(RemoteSigningResponse {
+                query: response.query,
+                variables: serde_json::to_string(&response.variables)
+                    .expect("serde value to json should not fail"),
+            }),
         })
 }
-
 
 #[wasm_bindgen]
 extern "C" {
@@ -147,7 +149,7 @@ pub fn wasm_handle_remote_signing_webhook_event(
     webhook_secret: String,
     master_seed_bytes: Vec<u8>,
     validation: &WasmValidation,
-) -> Result<RemoteSigningResponseWasm, RemoteSigningError> {
+) -> Result<Option<RemoteSigningResponseWasm>, RemoteSigningError> {
     let validation = (*validation).clone();
     let validator = WasmValidator::new(WasmValidation { obj: validation });
     handle_remote_signing_webhook_event(
@@ -156,9 +158,14 @@ pub fn wasm_handle_remote_signing_webhook_event(
         webhook_secret,
         master_seed_bytes,
         Box::new(validator),
-    ).map(|response| RemoteSigningResponseWasm {
-        query: response.query,
-        variables: response.variables,
+    )
+    .map(|response| match response {
+        None => None,
+        Some(response) => Some(RemoteSigningResponseWasm {
+            query: response.query,
+            variables: serde_json::to_string(&response.variables)
+                .expect("serde value to json should not fail"),
+        }),
     })
 }
 
@@ -176,7 +183,13 @@ mod test {
         let seed = "1a6deac8f74fb2e332677e3f4833b5e962f80d153fb368b8ee322a9caca4113d56cccd88f1c6a74e152669d8cd373fee2f27e3645d80de27640177a8c71395f8";
         let master_seed_bytes = hex::decode(seed).unwrap();
         let validator = Box::new(PositiveValidator);
-        let response = handle_remote_signing_webhook_event(webhook_data_string.as_bytes().to_vec(), sig.to_owned(), sec.to_owned(), master_seed_bytes, validator);
+        let response = handle_remote_signing_webhook_event(
+            webhook_data_string.as_bytes().to_vec(),
+            sig.to_owned(),
+            sec.to_owned(),
+            master_seed_bytes,
+            validator,
+        );
         assert!(response.is_ok());
     }
 }
