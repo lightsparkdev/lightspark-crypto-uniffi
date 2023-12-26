@@ -20,6 +20,7 @@ jobs:
           - cp39-cp39
           - cp310-cp310
           - cp311-cp311
+          - cp312-cp312
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -53,6 +54,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -97,6 +99,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -131,6 +134,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -165,6 +169,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
     steps:
       - name: "Checkout"
         uses: actions/checkout@v3
