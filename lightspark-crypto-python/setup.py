@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="lightspark_crypto_python",
-    version="0.1.6",
+    version="0.1.7",
     description="The Python language bindings for lightspark crypto operations",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
