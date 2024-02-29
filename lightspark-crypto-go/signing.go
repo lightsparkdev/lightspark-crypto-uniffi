@@ -202,6 +202,21 @@ func DecryptEcies(message []byte, privateKey []byte) ([]byte, error) {
 	return internal.DecryptEcies(message, privateKey)
 }
 
+func GenerateMultiSigAddress(network BitcoinNetwork, publicKey1 []byte, publicKey2 []byte) (string, error) {
+	var ffiNetwork internal.Network
+
+	switch network {
+	case Mainnet:
+		ffiNetwork = internal.NetworkBitcoin
+	case Testnet:
+		ffiNetwork = internal.NetworkTestnet
+	case Regtest:
+		ffiNetwork = internal.NetworkRegtest
+	}
+
+	return internal.GenerateMultisigAddress(ffiNetwork, publicKey1, publicKey2)
+}
+
 func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.LightsparkSigner, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
