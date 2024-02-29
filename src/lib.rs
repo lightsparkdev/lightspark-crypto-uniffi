@@ -3,6 +3,8 @@ pub mod remote_signing;
 pub mod signer;
 
 #[cfg(not(target_arch = "wasm32"))]
+use crate::crypto::generate_multisig_address;
+#[cfg(not(target_arch = "wasm32"))]
 use crypto::decrypt_ecies;
 #[cfg(not(target_arch = "wasm32"))]
 use crypto::encrypt_ecies;

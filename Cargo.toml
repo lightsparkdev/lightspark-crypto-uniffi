@@ -23,6 +23,7 @@ ecies = { "version" = "0.2.6", default-features = false, features = ["pure"]}
 lightspark-remote-signing = "=0.3.0"
 serde_json = "1.0.107"
 serde = "1.0.188"
+bitcoin-bech32 = "0.13.0"
 
 [features]
 default = ["uniffi/cli"]

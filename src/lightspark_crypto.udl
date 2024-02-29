@@ -12,6 +12,9 @@ namespace lightspark_crypto {
     sequence<u8> decrypt_ecies(sequence<u8> cipher_text, sequence<u8> private_key_bytes);
 
     [Throws=CryptoError]
+    string generate_multisig_address(Network network, sequence<u8> pk1, sequence<u8> pk2);
+
+    [Throws=CryptoError]
     KeyPair generate_keypair();
 
     [Throws=RemoteSigningError]
@@ -51,6 +54,7 @@ enum RemoteSigningError {
 enum CryptoError {
   "Secp256k1Error",
   "RustSecp256k1Error",
+  "InvalidPublicKeyScriptError",
 };
 
 [Error]
