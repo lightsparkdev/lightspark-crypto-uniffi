@@ -4,13 +4,20 @@ use std::sync::Arc;
 use bitcoin::hashes::sha256;
 use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use bitcoin::{
+    blockdata::{opcodes::all, script::Builder},
+    PublicKey as BitcoinPublicKey,
+};
 use ecies::decrypt;
 use ecies::encrypt;
+
+use crate::signer::Network;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CryptoError {
     Secp256k1Error(bitcoin::secp256k1::Error),
     RustSecp256k1Error(ecies::SecpError),
+    InvalidPublicKeyScriptError,
 }
 
 #[derive(Clone)]
@@ -34,6 +41,7 @@ impl fmt::Display for CryptoError {
         match self {
             Self::Secp256k1Error(err) => write!(f, "Secp256k1 error {}", err),
             Self::RustSecp256k1Error(err) => write!(f, "Rust Secp256k1 error {}", err),
+            Self::InvalidPublicKeyScriptError => write!(f, "Invalid public key script"),
         }
     }
 }
@@ -79,6 +87,52 @@ pub fn generate_keypair() -> Result<Arc<KeyPair>, CryptoError> {
     Ok(keypair.into())
 }
 
+pub fn generate_multisig_address(
+    network: Network,
+    pk1: Vec<u8>,
+    pk2: Vec<u8>,
+) -> Result<String, CryptoError> {
+    let pk1_obj =
+        BitcoinPublicKey::new(PublicKey::from_slice(&pk1).map_err(CryptoError::Secp256k1Error)?);
+    let pk2_obj =
+        BitcoinPublicKey::new(PublicKey::from_slice(&pk2).map_err(CryptoError::Secp256k1Error)?);
+    let network = match network {
+        Network::Bitcoin => bitcoin_bech32::constants::Network::Bitcoin,
+        Network::Testnet => bitcoin_bech32::constants::Network::Testnet,
+        Network::Regtest => bitcoin_bech32::constants::Network::Regtest,
+    };
+    _generate_multisig_address(network, &pk1_obj, &pk2_obj)
+}
+
+fn _generate_multisig_address(
+    network: bitcoin_bech32::constants::Network,
+    pk1: &BitcoinPublicKey,
+    pk2: &BitcoinPublicKey,
+) -> Result<String, CryptoError> {
+    let mut builder = Builder::new();
+    builder = builder.push_opcode(all::OP_PUSHNUM_2);
+
+    // The public keys need to be properly ordered in a multisig script.
+    if pk1 < pk2 {
+        builder = builder.push_key(&pk1);
+        builder = builder.push_key(&pk2);
+    } else {
+        builder = builder.push_key(&pk2);
+        builder = builder.push_key(&pk1);
+    }
+
+    builder = builder.push_opcode(all::OP_PUSHNUM_2);
+    builder = builder.push_opcode(all::OP_CHECKMULTISIG);
+
+    let script = builder.into_script().to_v0_p2wsh();
+
+    Ok(
+        bitcoin_bech32::WitnessProgram::from_scriptpubkey(script.as_bytes(), network.into())
+            .map_err(|_| CryptoError::InvalidPublicKeyScriptError)?
+            .to_address(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use ecies::utils::generate_keypair;
@@ -101,5 +155,41 @@ mod tests {
         let cipher_text = encrypt_ecies(msg.to_vec(), pk.serialize().to_vec()).unwrap();
         let plain_text = decrypt_ecies(cipher_text, sk.serialize().to_vec()).unwrap();
         assert_eq!(plain_text, msg.to_vec());
+    }
+
+    use super::generate_multisig_address;
+
+    #[test]
+    fn test_generate_multisig_address() {
+        let address = generate_multisig_address(
+            Network::Regtest,
+            hex::decode("0247997a5c32ccf934257a675c306bf6ec37019358240156628af62baad7066a83")
+                .unwrap(),
+            hex::decode("03b66b574670a7b6bea89c0548903f70a6f059fd9abe737dc4c5aafe14a127408f")
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            address,
+            "bcrt1qwgpja522vatddf0vfggrej8pcjrzvzcpkl5yvxzzq4djwr0gj9asrk86y9"
+        )
+    }
+
+    #[test]
+    fn test_generate_multisig_address_reversed() {
+        let address = generate_multisig_address(
+            Network::Regtest,
+            hex::decode("03b66b574670a7b6bea89c0548903f70a6f059fd9abe737dc4c5aafe14a127408f")
+                .unwrap(),
+            hex::decode("0247997a5c32ccf934257a675c306bf6ec37019358240156628af62baad7066a83")
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            address,
+            "bcrt1qwgpja522vatddf0vfggrej8pcjrzvzcpkl5yvxzzq4djwr0gj9asrk86y9"
+        )
     }
 }
