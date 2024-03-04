@@ -9,7 +9,7 @@ edition = "2021"
 hex = "0.4.3"
 rand_core = { "version" = "0.6.4", features = ["getrandom"] }
 getrandom = { version = "0.2", features = ["js"] }
-uniffi = "0.23.0"
+uniffi = "0.26.0"
 wasm-bindgen = "0.2.87"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
@@ -17,7 +17,7 @@ wasm-bindgen = "0.2.87"
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.6", optional = true }
-bitcoin = "0.30.1"
+bitcoin = "0.31.1"
 bip39 = { "version" = "2.0.0", features = ["rand"]}
 ecies = { "version" = "0.2.6", default-features = false, features = ["pure"]}
 lightspark-remote-signing = "=0.3.0"
@@ -29,7 +29,7 @@ bitcoin-bech32 = "0.13.0"
 default = ["uniffi/cli"]
 
 [build-dependencies]
-uniffi = { version = "0.23.0", features = [ "build" ] }
+uniffi = { version = "0.26.0", features = [ "build" ] }
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

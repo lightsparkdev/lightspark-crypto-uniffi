@@ -46,6 +46,8 @@ impl fmt::Display for CryptoError {
     }
 }
 
+impl std::error::Error for CryptoError {}
+
 pub fn sign_ecdsa(msg: Vec<u8>, private_key_bytes: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
     let secp = Secp256k1::new();
     let sk = SecretKey::from_slice(&private_key_bytes).map_err(CryptoError::Secp256k1Error)?;
@@ -124,7 +126,7 @@ fn _generate_multisig_address(
     builder = builder.push_opcode(all::OP_PUSHNUM_2);
     builder = builder.push_opcode(all::OP_CHECKMULTISIG);
 
-    let script = builder.into_script().to_v0_p2wsh();
+    let script = builder.into_script().to_p2wsh();
 
     Ok(
         bitcoin_bech32::WitnessProgram::from_scriptpubkey(script.as_bytes(), network.into())
