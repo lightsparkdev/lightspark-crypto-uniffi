@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use bitcoin::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::bip32::{DerivationPath, Xpriv, Xpub};
 use bitcoin::hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::ecdh::SharedSecret;
 use bitcoin::secp256k1::ecdsa::Signature;
@@ -127,8 +127,8 @@ impl InvoiceSignature {
 
 #[wasm_bindgen]
 pub struct LightsparkSigner {
-    master_private_key: ExtendedPrivKey,
-    node_private_key: ExtendedPrivKey,
+    master_private_key: Xpriv,
+    node_private_key: Xpriv,
 }
 
 #[wasm_bindgen]
@@ -139,7 +139,7 @@ impl LightsparkSigner {
             Network::Testnet => bitcoin::Network::Testnet,
             Network::Regtest => bitcoin::Network::Regtest,
         };
-        let master_private_key = ExtendedPrivKey::new_master(network, seed.as_bytes().as_slice())
+        let master_private_key = Xpriv::new_master(network, seed.as_bytes().as_slice())
             .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
         let secp = Secp256k1::new();
         let node_key_path = DerivationPath::from_str(NODE_KEY_PATH)
@@ -163,7 +163,7 @@ impl LightsparkSigner {
 
     pub fn get_master_public_key(&self) -> Result<String, LightsparkSignerError> {
         let secp = Secp256k1::new();
-        let pubkey = ExtendedPubKey::from_priv(&secp, &self.master_private_key);
+        let pubkey = Xpub::from_priv(&secp, &self.master_private_key);
         Ok(pubkey.to_string())
     }
 
@@ -178,7 +178,7 @@ impl LightsparkSigner {
             .master_private_key
             .derive_priv(&secp, &path)
             .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
-        let pubkey = ExtendedPubKey::from_priv(&secp, &private_key);
+        let pubkey = Xpub::from_priv(&secp, &private_key);
         Ok(pubkey.to_string())
     }
 
@@ -194,7 +194,7 @@ impl LightsparkSigner {
         let signing_key = self.derive_and_tweak_key(derivation_path, add_tweak, mul_tweak)?;
         let signature: Signature = match is_raw {
             true => {
-                let msg = Message::from_slice(message.as_slice())
+                let msg = Message::from_digest_slice(message.as_slice())
                     .map_err(LightsparkSignerError::Secp256k1Error)?;
                 secp.sign_ecdsa(&msg, &signing_key)
             }
@@ -295,10 +295,7 @@ impl LightsparkSigner {
         self.tweak_key(derived_key.private_key, add_tweak, mul_tweak)
     }
 
-    fn derive_key(
-        &self,
-        derivation_path: String,
-    ) -> Result<ExtendedPrivKey, LightsparkSignerError> {
+    fn derive_key(&self, derivation_path: String) -> Result<Xpriv, LightsparkSignerError> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&derivation_path)
             .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
@@ -321,8 +318,8 @@ impl LightsparkSigner {
         &self,
         derivation_path: String,
     ) -> Result<String, LightsparkSignerError> {
-        let extended_key_string = self.derive_public_key(derivation_path)?;
-        let key = ExtendedPubKey::from_str(extended_key_string.as_str()).unwrap();
+        let extendend_key_string = self.derive_public_key(derivation_path)?;
+        let key = Xpub::from_str(extendend_key_string.as_str()).unwrap();
         Ok(hex::encode(key.to_pub().to_bytes()))
     }
 
@@ -395,7 +392,7 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice())
+        let msg = Message::from_digest_slice(invoice_hash.as_slice())
             .map_err(LightsparkSignerError::Secp256k1Error)?;
         let secp = Secp256k1::new();
         let sig = secp
@@ -433,7 +430,7 @@ impl LightsparkSigner {
         invoice_hash: Vec<u8>,
     ) -> Result<InvoiceSignature, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_slice(invoice_hash.as_slice())
+        let msg = Message::from_digest_slice(invoice_hash.as_slice())
             .map_err(LightsparkSignerError::Secp256k1Error)?;
         let secp = Secp256k1::new();
         let sig = secp
@@ -500,9 +497,7 @@ mod tests {
         let xpub = signer.derive_public_key("m".to_owned()).unwrap();
         assert_eq!(xpub, public_key_string);
 
-        let verification_key = ExtendedPubKey::from_str(public_key_string)
-            .unwrap()
-            .public_key;
+        let verification_key = Xpub::from_str(public_key_string).unwrap().public_key;
 
         let message = b"Hello, world!";
         let signature_bytes = signer
@@ -528,12 +523,12 @@ mod tests {
 
         let signer1 = LightsparkSigner::new(&seed1, Network::Bitcoin).unwrap();
         let pub1 = signer1.derive_public_key("m/0".to_owned()).unwrap();
-        let xpub1 = ExtendedPubKey::from_str(&pub1).unwrap();
+        let xpub1 = Xpub::from_str(&pub1).unwrap();
         let pub1_bytes = xpub1.public_key.serialize();
 
         let signer2 = LightsparkSigner::new(&seed2, Network::Bitcoin).unwrap();
         let pub2 = signer2.derive_public_key("m/0".to_owned()).unwrap();
-        let xpub2 = ExtendedPubKey::from_str(&pub2).unwrap();
+        let xpub2 = Xpub::from_str(&pub2).unwrap();
         let pub2_bytes = xpub2.public_key.serialize();
 
         let secret_1 = signer1.ecdh(pub2_bytes.to_vec()).unwrap();
@@ -638,9 +633,9 @@ mod tests {
         let pubkey = signer
             .derive_public_key("m/3/2106220917/0".to_owned())
             .unwrap();
-        let verification_key = ExtendedPubKey::from_str(&pubkey).unwrap().public_key;
+        let verification_key = Xpub::from_str(&pubkey).unwrap().public_key;
 
-        let msg = Message::from_slice(&msg).unwrap();
+        let msg = Message::from_digest_slice(&msg).unwrap();
         let signature = Signature::from_compact(signature_bytes.as_slice()).unwrap();
         let secp = Secp256k1::new();
         assert!(secp
