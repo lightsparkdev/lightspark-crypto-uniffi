@@ -31,9 +31,9 @@ build-darwin-arm64:
 
 code-gen-go:
 	mkdir -p lightspark-crypto-go/internal
-	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.1.5+v0.23.0
+	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.2.1+v0.25.0
 	uniffi-bindgen-go src/lightspark_crypto.udl --out-dir lightspark-crypto-go
-	mv lightspark-crypto-go/uniffi/lightspark_crypto/* lightspark-crypto-go/internal
+	mv lightspark-crypto-go/lightspark_crypto/* lightspark-crypto-go/internal
 	sed -i '' 's/package lightspark_crypto/package internal/g' lightspark-crypto-go/internal/lightspark_crypto.go
 	rm -rf lightspark-crypto-go/uniffi
 
