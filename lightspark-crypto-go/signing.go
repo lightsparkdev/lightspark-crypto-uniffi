@@ -217,6 +217,10 @@ func GenerateMultiSigAddress(network BitcoinNetwork, publicKey1 []byte, publicKe
 	return internal.GenerateMultisigAddress(ffiNetwork, publicKey1, publicKey2)
 }
 
+func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
+	return internal.DeriveAndTweakPubkey(pubkey, derivationPath, addTweak, mulTweak)
+}
+
 func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.LightsparkSigner, error) {
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
