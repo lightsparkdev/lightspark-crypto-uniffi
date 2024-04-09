@@ -252,6 +252,14 @@ RustBuffer uniffi_lightspark_crypto_fn_func_decrypt_ecies(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(
+	RustBuffer pubkey,
+	RustBuffer derivation_path,
+	RustBuffer add_tweak,
+	RustBuffer mul_tweak,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_lightspark_crypto_fn_func_encrypt_ecies(
 	RustBuffer msg,
 	RustBuffer public_key_bytes,
@@ -591,6 +599,10 @@ void ffi_lightspark_crypto_rust_future_complete_void(
 );
 
 uint16_t uniffi_lightspark_crypto_checksum_func_decrypt_ecies(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey(
 	RustCallStatus* out_status
 );
 

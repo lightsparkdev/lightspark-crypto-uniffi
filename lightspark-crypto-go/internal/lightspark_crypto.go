@@ -357,6 +357,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey(uniffiStatus)
+		})
+		if checksum != 44901 {
+			// If this happens try cleaning and rebuilding your project
+			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_lightspark_crypto_checksum_func_encrypt_ecies(uniffiStatus)
 		})
 		if checksum != 57526 {
@@ -1473,6 +1482,8 @@ func (err CryptoError) Unwrap() error {
 var ErrCryptoErrorSecp256k1Error = fmt.Errorf("CryptoErrorSecp256k1Error")
 var ErrCryptoErrorRustSecp256k1Error = fmt.Errorf("CryptoErrorRustSecp256k1Error")
 var ErrCryptoErrorInvalidPublicKeyScriptError = fmt.Errorf("CryptoErrorInvalidPublicKeyScriptError")
+var ErrCryptoErrorKeyDerivationError = fmt.Errorf("CryptoErrorKeyDerivationError")
+var ErrCryptoErrorKeyTweakError = fmt.Errorf("CryptoErrorKeyTweakError")
 
 // Variant structs
 type CryptoErrorSecp256k1Error struct {
@@ -1529,6 +1540,42 @@ func (self CryptoErrorInvalidPublicKeyScriptError) Is(target error) bool {
 	return target == ErrCryptoErrorInvalidPublicKeyScriptError
 }
 
+type CryptoErrorKeyDerivationError struct {
+	message string
+}
+
+func NewCryptoErrorKeyDerivationError() *CryptoError {
+	return &CryptoError{
+		err: &CryptoErrorKeyDerivationError{},
+	}
+}
+
+func (err CryptoErrorKeyDerivationError) Error() string {
+	return fmt.Sprintf("KeyDerivationError: %s", err.message)
+}
+
+func (self CryptoErrorKeyDerivationError) Is(target error) bool {
+	return target == ErrCryptoErrorKeyDerivationError
+}
+
+type CryptoErrorKeyTweakError struct {
+	message string
+}
+
+func NewCryptoErrorKeyTweakError() *CryptoError {
+	return &CryptoError{
+		err: &CryptoErrorKeyTweakError{},
+	}
+}
+
+func (err CryptoErrorKeyTweakError) Error() string {
+	return fmt.Sprintf("KeyTweakError: %s", err.message)
+}
+
+func (self CryptoErrorKeyTweakError) Is(target error) bool {
+	return target == ErrCryptoErrorKeyTweakError
+}
+
 type FfiConverterTypeCryptoError struct{}
 
 var FfiConverterTypeCryptoErrorINSTANCE = FfiConverterTypeCryptoError{}
@@ -1552,6 +1599,10 @@ func (c FfiConverterTypeCryptoError) Read(reader io.Reader) error {
 		return &CryptoError{&CryptoErrorRustSecp256k1Error{message}}
 	case 3:
 		return &CryptoError{&CryptoErrorInvalidPublicKeyScriptError{message}}
+	case 4:
+		return &CryptoError{&CryptoErrorKeyDerivationError{message}}
+	case 5:
+		return &CryptoError{&CryptoErrorKeyTweakError{message}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeCryptoError.Read()", errorID))
 	}
@@ -1566,6 +1617,10 @@ func (c FfiConverterTypeCryptoError) Write(writer io.Writer, value *CryptoError)
 		writeInt32(writer, 2)
 	case *CryptoErrorInvalidPublicKeyScriptError:
 		writeInt32(writer, 3)
+	case *CryptoErrorKeyDerivationError:
+		writeInt32(writer, 4)
+	case *CryptoErrorKeyTweakError:
+		writeInt32(writer, 5)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCryptoError.Write", value))
@@ -2172,6 +2227,18 @@ func (FfiDestroyerSequenceUint8) Destroy(sequence []uint8) {
 func DecryptEcies(cipherText []uint8, privateKeyBytes []uint8) ([]uint8, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_lightspark_crypto_fn_func_decrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(cipherText), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []uint8
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterSequenceUint8INSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(FfiConverterStringINSTANCE.Lower(pubkey), FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterOptionalSequenceUint8INSTANCE.Lower(addTweak), FfiConverterOptionalSequenceUint8INSTANCE.Lower(mulTweak), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
