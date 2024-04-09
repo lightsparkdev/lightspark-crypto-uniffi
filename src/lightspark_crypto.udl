@@ -17,6 +17,9 @@ namespace lightspark_crypto {
     [Throws=CryptoError]
     KeyPair generate_keypair();
 
+    [Throws=CryptoError]
+    sequence<u8> derive_and_tweak_pubkey(string pubkey, string derivation_path, sequence<u8>? add_tweak, sequence<u8>? mul_tweak);
+
     [Throws=RemoteSigningError]
     RemoteSigningResponse? handle_remote_signing_webhook_event(
         sequence<u8> webhook_data,
@@ -55,6 +58,8 @@ enum CryptoError {
   "Secp256k1Error",
   "RustSecp256k1Error",
   "InvalidPublicKeyScriptError",
+  "KeyDerivationError",
+  "KeyTweakError",
 };
 
 [Error]
