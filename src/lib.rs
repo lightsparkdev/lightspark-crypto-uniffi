@@ -1,4 +1,5 @@
 pub mod crypto;
+pub mod funds_recovery_kit;
 pub mod remote_signing;
 pub mod signer;
 
