@@ -25,6 +25,28 @@ namespace lightspark_crypto {
         sequence<u8> master_seed_bytes,
         Validation validation
     );
+
+    [Throws=FundsRecoveryKitError]
+    Response sign_transactions(
+        string master_seed,
+        string data,
+        Network network
+    );
+};
+
+dictionary StringTuple {
+    string first;
+    string second;
+};
+
+dictionary Response {
+    string commitment_tx;
+    string sweep_tx;
+    sequence<StringTuple> htlc_inbound_tx;
+    sequence<StringTuple> htlc_outbound_tx;
+    string counterparty_sweep_tx;
+    sequence<string> counterparty_htlc_inbound_tx;
+    sequence<string> counterparty_htlc_outbound_tx;
 };
 
 dictionary RemoteSigningResponse {
@@ -64,6 +86,11 @@ enum LightsparkSignerError {
   "KeyDerivationError",
   "KeyTweakError",
   "EntropyLengthError",
+};
+
+[Traits=(Debug)]
+interface FundsRecoveryKitError{
+    string message();
 };
 
 enum Network {
