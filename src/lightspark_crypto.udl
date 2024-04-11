@@ -88,9 +88,9 @@ enum LightsparkSignerError {
   "EntropyLengthError",
 };
 
-[Traits=(Debug)]
+[Error]
 interface FundsRecoveryKitError{
-    string message();
+    Error(string message);
 };
 
 enum Network {

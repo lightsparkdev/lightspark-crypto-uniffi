@@ -57,19 +57,35 @@ pub struct Response {
 }
 
 #[derive(Clone, Debug)]
-pub struct FundsRecoveryKitError {
+pub enum FundsRecoveryKitError {
+    Error { message: String },
+}
+
+impl std::error::Error for FundsRecoveryKitError {}
+
+impl fmt::Display for FundsRecoveryKitError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = match self {
+            Self::Error { message } => message,
+        };
+        write!(f, "Funds Recovery Kit Error: {}", message)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FundsRecoveryKitInternalError {
     pub error: String,
 }
 
-impl fmt::Display for FundsRecoveryKitError {
+impl fmt::Display for FundsRecoveryKitInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Funds Recovery Kit Error")
     }
 }
 
-impl std::error::Error for FundsRecoveryKitError {}
+impl std::error::Error for FundsRecoveryKitInternalError {}
 
-impl From<&str> for FundsRecoveryKitError {
+impl From<&str> for FundsRecoveryKitInternalError {
     fn from(value: &str) -> Self {
         Self {
             error: value.into(),
@@ -77,22 +93,16 @@ impl From<&str> for FundsRecoveryKitError {
     }
 }
 
-impl FundsRecoveryKitError {
-    pub fn message(&self) -> String {
-        self.to_string()
-    }
-}
-
 fn tweak_key(
     secret_key: SecretKey,
     add_tweak: [u8; 32],
-) -> Result<SecretKey, FundsRecoveryKitError> {
+) -> Result<SecretKey, FundsRecoveryKitInternalError> {
     let mut res: SecretKey = secret_key;
     let scalar = Scalar::from_be_bytes(add_tweak)
-        .map_err(|_| FundsRecoveryKitError::from("Invalid add tweak bytes"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid add tweak bytes"))?;
     res = res
         .add_tweak(&scalar)
-        .map_err(|_| FundsRecoveryKitError::from("Add tweak operation failed"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Add tweak operation failed"))?;
     Ok(res)
 }
 
@@ -109,84 +119,95 @@ fn derive_private_keys(
         Option<bip32::Xpriv>,
         Option<bip32::Xpriv>,
     ),
-    FundsRecoveryKitError,
+    FundsRecoveryKitInternalError,
 > {
     let seed = hex::decode(master_seed).map_err(|_| {
-        FundsRecoveryKitError::from("Could not convert master seed hex to byte array")
+        FundsRecoveryKitInternalError::from("Could not convert master seed hex to byte array")
     })?;
-    let bip = bip32::Xpriv::new_master(network, seed.as_slice())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert master seed to private key"))?;
+    let bip = bip32::Xpriv::new_master(network, seed.as_slice()).map_err(|_| {
+        FundsRecoveryKitInternalError::from("Could not convert master seed to private key")
+    })?;
     let secp = Secp256k1::new();
 
-    let funding_private_key_derivation_path = bip32::DerivationPath::from_str(
-        &data.funding_private_key_derivation_path,
-    )
-    .map_err(|_| FundsRecoveryKitError::from("Invalid funding_private_key_derivation_path"))?;
+    let funding_private_key_derivation_path =
+        bip32::DerivationPath::from_str(&data.funding_private_key_derivation_path).map_err(
+            |_| FundsRecoveryKitInternalError::from("Invalid funding_private_key_derivation_path"),
+        )?;
     let delayed_payment_base_key_derivation_path = bip32::DerivationPath::from_str(
         &data.delayed_payment_base_key_derivation_path,
     )
-    .map_err(|_| FundsRecoveryKitError::from("Invalid delayed_payment_base_key_derivation_path"))?;
+    .map_err(|_| {
+        FundsRecoveryKitInternalError::from("Invalid delayed_payment_base_key_derivation_path")
+    })?;
     let htlc_base_key_derivation_path =
-        bip32::DerivationPath::from_str(&data.htlc_base_key_derivation_path)
-            .map_err(|_| FundsRecoveryKitError::from("Invalid htlc_base_key_derivation_path"))?;
+        bip32::DerivationPath::from_str(&data.htlc_base_key_derivation_path).map_err(|_| {
+            FundsRecoveryKitInternalError::from("Invalid htlc_base_key_derivation_path")
+        })?;
     let preimage_key_derivation_path = bip32::DerivationPath::from_str("m/4h")
-        .map_err(|_| FundsRecoveryKitError::from("Invalid preimage_key_derivation_path"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid preimage_key_derivation_path"))?;
 
     let funding_private_key = bip
         .derive_priv(&secp, &funding_private_key_derivation_path)
-        .map_err(|_| FundsRecoveryKitError::from("Invalid funding_private_key"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid funding_private_key"))?;
     let mut delayed_payment_private_key = bip
         .derive_priv(&secp, &delayed_payment_base_key_derivation_path)
-        .map_err(|_| FundsRecoveryKitError::from("Invalid delayed_payment_private_key"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid delayed_payment_private_key"))?;
     let mut htlc_private_key = bip
         .derive_priv(&secp, &htlc_base_key_derivation_path)
-        .map_err(|_| FundsRecoveryKitError::from("Invalid htlc_private_key"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid htlc_private_key"))?;
     let preimage_private_key = bip
         .derive_priv(&secp, &preimage_key_derivation_path)
-        .map_err(|_| FundsRecoveryKitError::from("Invalid preimage_key"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Invalid preimage_key"))?;
 
     delayed_payment_private_key.private_key = tweak_key(
         delayed_payment_private_key.private_key,
         hex::decode(data.sweep_tx_add_tweak.clone())
-            .map_err(|_| FundsRecoveryKitError::from("Invalid sweep_tx_add_tweak"))?
+            .map_err(|_| FundsRecoveryKitInternalError::from("Invalid sweep_tx_add_tweak"))?
             .try_into()
-            .map_err(|_| FundsRecoveryKitError::from("Invalid sweep_tx_add_tweak"))?,
+            .map_err(|_| FundsRecoveryKitInternalError::from("Invalid sweep_tx_add_tweak"))?,
     )
-    .map_err(|_| FundsRecoveryKitError::from("Invalid tweaked_delayed_payment_secret_key"))?;
+    .map_err(|_| {
+        FundsRecoveryKitInternalError::from("Invalid tweaked_delayed_payment_secret_key")
+    })?;
 
     let mut htlc_private_key_clone = htlc_private_key.clone();
     htlc_private_key.private_key = tweak_key(
         htlc_private_key.private_key,
         hex::decode(data.htlc_tx_add_tweak.clone())
-            .map_err(|_| FundsRecoveryKitError::from("Invalid htlc_tx_add_tweak"))?
+            .map_err(|_| FundsRecoveryKitInternalError::from("Invalid htlc_tx_add_tweak"))?
             .try_into()
-            .map_err(|_| FundsRecoveryKitError::from("Invalid htlc_tx_add_tweak"))?,
+            .map_err(|_| FundsRecoveryKitInternalError::from("Invalid htlc_tx_add_tweak"))?,
     )
-    .map_err(|_| FundsRecoveryKitError::from("Invalid tweaked_htlc_secret_key"))?;
+    .map_err(|_| FundsRecoveryKitInternalError::from("Invalid tweaked_htlc_secret_key"))?;
 
     let mut counterparty_htlc_private_key = None;
     if let Some(counterparty_htlc_tx_add_tweak) = &data.counterparty_htlc_tx_add_tweak {
         htlc_private_key_clone.private_key = tweak_key(
             htlc_private_key_clone.private_key,
             hex::decode(counterparty_htlc_tx_add_tweak.clone())
-                .map_err(|_| FundsRecoveryKitError::from("Invalid counterparty_htlc_tx_add_tweak"))?
+                .map_err(|_| {
+                    FundsRecoveryKitInternalError::from("Invalid counterparty_htlc_tx_add_tweak")
+                })?
                 .try_into()
                 .map_err(|_| {
-                    FundsRecoveryKitError::from("Invalid counterparty_htlc_tx_add_tweak")
+                    FundsRecoveryKitInternalError::from("Invalid counterparty_htlc_tx_add_tweak")
                 })?,
         )
-        .map_err(|_| FundsRecoveryKitError::from("Invalid tweaked_counterparty_htlc_secret_key"))?;
+        .map_err(|_| {
+            FundsRecoveryKitInternalError::from("Invalid tweaked_counterparty_htlc_secret_key")
+        })?;
         counterparty_htlc_private_key = Some(htlc_private_key_clone);
     }
 
     let mut payment_private_key = None;
     if let Some(payment_key_derivation_path) = &data.payment_key_derivation_path {
         let payment_key_derivation_path =
-            bip32::DerivationPath::from_str(payment_key_derivation_path)
-                .map_err(|_| FundsRecoveryKitError::from("Invalid payment_key_derivation_path"))?;
+            bip32::DerivationPath::from_str(payment_key_derivation_path).map_err(|_| {
+                FundsRecoveryKitInternalError::from("Invalid payment_key_derivation_path")
+            })?;
         payment_private_key = Some(
             bip.derive_priv(&secp, &payment_key_derivation_path)
-                .map_err(|_| FundsRecoveryKitError::from("Invalid payment_private_key"))?,
+                .map_err(|_| FundsRecoveryKitInternalError::from("Invalid payment_private_key"))?,
         );
     }
 
@@ -200,21 +221,23 @@ fn derive_private_keys(
     ))
 }
 
-fn deserialize_transaction(raw_tx: &str) -> Result<Transaction, FundsRecoveryKitError> {
+fn deserialize_transaction(raw_tx: &str) -> Result<Transaction, FundsRecoveryKitInternalError> {
     encode::deserialize(
-        &<Vec<u8>>::from_hex(raw_tx)
-            .map_err(|_| FundsRecoveryKitError::from("Could not convert raw string to hex"))?[..],
+        &<Vec<u8>>::from_hex(raw_tx).map_err(|_| {
+            FundsRecoveryKitInternalError::from("Could not convert raw string to hex")
+        })?[..],
     )
-    .map_err(|_| FundsRecoveryKitError::from("Could not consensus decode raw transaction"))
+    .map_err(|_| FundsRecoveryKitInternalError::from("Could not consensus decode raw transaction"))
 }
 
 fn derive_preimage(
     nonce: &str,
     preimage_key: &bip32::Xpriv,
-) -> Result<Vec<u8>, FundsRecoveryKitError> {
+) -> Result<Vec<u8>, FundsRecoveryKitInternalError> {
     // let secret_key_bytes = preimage_key.to_bytes();
-    let nonce_bytes = hex::decode(nonce)
-        .map_err(|_| FundsRecoveryKitError::from("Could not properly decode nonce value"))?;
+    let nonce_bytes = hex::decode(nonce).map_err(|_| {
+        FundsRecoveryKitInternalError::from("Could not properly decode nonce value")
+    })?;
 
     let mut hmac_engine: HmacEngine<sha512::Hash> =
         HmacEngine::new(&preimage_key.private_key.secret_bytes());
@@ -228,17 +251,17 @@ fn sign_commitment_transaction(
     transaction: &mut Transaction,
     private_key: &PrivateKey,
     amount: u64,
-) -> Result<(), FundsRecoveryKitError> {
+) -> Result<(), FundsRecoveryKitInternalError> {
     let script = Script::from_bytes(
         transaction
             .input
             .first()
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness
             .nth(3)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))?,
     );
@@ -246,11 +269,13 @@ fn sign_commitment_transaction(
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wsh_signature_hash(0, script, Amount::from_sat(amount), EcdsaSighashType::All)
         .map_err(|_| {
-            FundsRecoveryKitError::from("Could not generate sighash for commitment transaction")
+            FundsRecoveryKitInternalError::from(
+                "Could not generate sighash for commitment transaction",
+            )
         })?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
 
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
@@ -258,14 +283,14 @@ fn sign_commitment_transaction(
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
         .to_vec();
     if new_witness
         .get(1)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "First element of witness does not exist",
         ))?
         .is_empty()
@@ -277,7 +302,7 @@ fn sign_commitment_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -288,7 +313,7 @@ fn sign_sweep_transaction(
     transaction: &mut Transaction,
     commitment_transaction: &Transaction,
     private_key: &PrivateKey,
-) -> Result<(), FundsRecoveryKitError> {
+) -> Result<(), FundsRecoveryKitInternalError> {
     let amount =
         commitment_transaction.output[transaction.input[0].previous_output.vout as usize].value;
 
@@ -296,12 +321,12 @@ fn sign_sweep_transaction(
         transaction
             .input
             .first()
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness
             .nth(2)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))?,
     );
@@ -309,11 +334,11 @@ fn sign_sweep_transaction(
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wsh_signature_hash(0, script, amount, EcdsaSighashType::All)
         .map_err(|_| {
-            FundsRecoveryKitError::from("Could not generate sighash for sweep transaction")
+            FundsRecoveryKitInternalError::from("Could not generate sighash for sweep transaction")
         })?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
 
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
@@ -321,7 +346,7 @@ fn sign_sweep_transaction(
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
@@ -330,7 +355,7 @@ fn sign_sweep_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -343,26 +368,26 @@ fn sign_htlc_transaction(
     private_key: &PrivateKey,
     nonce: &str,
     preimage_key: &bip32::Xpriv,
-) -> Result<bool, FundsRecoveryKitError> {
+) -> Result<bool, FundsRecoveryKitInternalError> {
     let amount =
         commitment_transaction.output[transaction.input[0].previous_output.vout as usize].value;
     let script = Script::from_bytes(
         transaction
             .input
             .first()
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness
             .nth(4)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))?,
     );
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
@@ -370,11 +395,11 @@ fn sign_htlc_transaction(
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wsh_signature_hash(0, script, amount, EcdsaSighashType::All)
         .map_err(|_| {
-            FundsRecoveryKitError::from("Could not generate sighash for htlc transaction")
+            FundsRecoveryKitInternalError::from("Could not generate sighash for htlc transaction")
         })?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
 
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
@@ -385,7 +410,7 @@ fn sign_htlc_transaction(
         transaction
             .input
             .get_mut(0)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness = Witness::from_slice(&new_witness);
@@ -396,7 +421,7 @@ fn sign_htlc_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -407,25 +432,25 @@ fn sign_htlc_sweep_transaction(
     transaction: &mut Transaction,
     htlc_transaction: &Transaction,
     private_key: &PrivateKey,
-) -> Result<(), FundsRecoveryKitError> {
+) -> Result<(), FundsRecoveryKitInternalError> {
     let amount = htlc_transaction.output[transaction.input[0].previous_output.vout as usize].value;
     let script = Script::from_bytes(
         transaction
             .input
             .first()
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness
             .nth(2)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))?,
     );
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
@@ -433,11 +458,11 @@ fn sign_htlc_sweep_transaction(
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wsh_signature_hash(0, script, amount, EcdsaSighashType::All)
         .map_err(|_| {
-            FundsRecoveryKitError::from("Could not generate sighash for sweep transaction")
+            FundsRecoveryKitInternalError::from("Could not generate sighash for sweep transaction")
         })?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
     sig.push(EcdsaSighashType::All as u8);
@@ -445,7 +470,7 @@ fn sign_htlc_sweep_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -465,7 +490,7 @@ fn process_htlc_transactions(
         Vec<(Transaction, Transaction)>,
         Vec<(Transaction, Transaction)>,
     ),
-    FundsRecoveryKitError,
+    FundsRecoveryKitInternalError,
 > {
     let mut all_htlc_inbound_transactions = Vec::new();
     let mut all_htlc_outbound_transactions = Vec::new();
@@ -506,28 +531,29 @@ fn sign_counterparty_sweep_transaction(
     commitment_transaction: &Transaction,
     private_key: &PrivateKey,
     network: bitcoin::Network,
-) -> Result<(), FundsRecoveryKitError> {
+) -> Result<(), FundsRecoveryKitInternalError> {
     let amount =
         commitment_transaction.output[transaction.input[0].previous_output.vout as usize].value;
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
         .to_vec();
-    let pubkey = PublicKey::from_slice(new_witness[1].as_slice())
-        .map_err(|_| FundsRecoveryKitError::from("Could not generate pubkey from witness"))?;
+    let pubkey = PublicKey::from_slice(new_witness[1].as_slice()).map_err(|_| {
+        FundsRecoveryKitInternalError::from("Could not generate pubkey from witness")
+    })?;
     let script = bitcoin::Address::p2wpkh(&pubkey, network)
         .unwrap()
         .script_pubkey();
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wpkh_signature_hash(0, &script, amount, EcdsaSighashType::All)
-        .map_err(|e| FundsRecoveryKitError::from(e.to_string().as_str()))?;
+        .map_err(|e| FundsRecoveryKitInternalError::from(e.to_string().as_str()))?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
     sig.push(EcdsaSighashType::All as u8);
@@ -535,7 +561,7 @@ fn sign_counterparty_sweep_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -548,26 +574,26 @@ fn sign_counterparty_htlc_transaction(
     private_key: &PrivateKey,
     nonce: &str,
     preimage_key: &bip32::Xpriv,
-) -> Result<bool, FundsRecoveryKitError> {
+) -> Result<bool, FundsRecoveryKitInternalError> {
     let amount =
         commitment_transaction.output[transaction.input[0].previous_output.vout as usize].value;
     let script = Script::from_bytes(
         transaction
             .input
             .first()
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness
             .nth(2)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))?,
     );
     let mut new_witness = transaction
         .input
         .first()
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness
@@ -575,13 +601,13 @@ fn sign_counterparty_htlc_transaction(
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wsh_signature_hash(0, script, amount, EcdsaSighashType::All)
         .map_err(|_| {
-            FundsRecoveryKitError::from(
+            FundsRecoveryKitInternalError::from(
                 "Could not generate sighash for counterparty htlc transaction",
             )
         })?;
     let secp = Secp256k1::new();
     let msg = bitcoin::secp256k1::Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|_| FundsRecoveryKitError::from("Could not convert sighash to message"))?;
+        .map_err(|_| FundsRecoveryKitInternalError::from("Could not convert sighash to message"))?;
 
     let local_sig = secp.sign_ecdsa_low_r(&msg, &private_key.inner);
     let mut sig = local_sig.serialize_der().to_vec();
@@ -591,7 +617,7 @@ fn sign_counterparty_htlc_transaction(
         transaction
             .input
             .get_mut(0)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction input does not exist",
             ))?
             .witness = Witness::from_slice(&new_witness);
@@ -602,7 +628,7 @@ fn sign_counterparty_htlc_transaction(
     transaction
         .input
         .get_mut(0)
-        .ok_or(FundsRecoveryKitError::from(
+        .ok_or(FundsRecoveryKitInternalError::from(
             "Transaction input does not exist",
         ))?
         .witness = Witness::from_slice(&new_witness);
@@ -615,7 +641,7 @@ fn process_counterparty_htlc_transactions(
     nonces: &[String],
     preimage_key: &bip32::Xpriv,
     htlc_private_key: &PrivateKey,
-) -> Result<(Vec<Transaction>, Vec<Transaction>), FundsRecoveryKitError> {
+) -> Result<(Vec<Transaction>, Vec<Transaction>), FundsRecoveryKitInternalError> {
     let mut all_htlc_inbound_transactions = Vec::new();
     let mut all_htlc_outbound_transactions = Vec::new();
 
@@ -647,9 +673,9 @@ fn sign_transactions_impl(
     master_seed: String,
     data: String,
     network: bitcoin::Network,
-) -> Result<Response, FundsRecoveryKitError> {
+) -> Result<Response, FundsRecoveryKitInternalError> {
     let parsed_data = serde_json::from_str::<Event>(&data)
-        .map_err(|e| FundsRecoveryKitError::from(e.to_string().as_str()))?;
+        .map_err(|e| FundsRecoveryKitInternalError::from(e.to_string().as_str()))?;
     let mut commitment_transaction = deserialize_transaction(&parsed_data.commitment_tx)?;
     let (
         funding_private_key,
@@ -766,7 +792,7 @@ pub fn sign_transactions(
         signer::Network::Regtest => bitcoin::Network::Regtest,
     };
     // For now, do not expose implementation errors as the kit should just be serialized and sent. If this fails we will have to look into it further.
-    sign_transactions_impl(master_seed, data, network).map_err(|_| FundsRecoveryKitError::from("Generating the funds recovery kit failed. The kit should only be serialized and sent without modification."))
+    sign_transactions_impl(master_seed, data, network).map_err(|_| FundsRecoveryKitError::Error { message: "Generating the funds recovery kit failed. The kit should only be serialized and sent without modification.".to_string() })
 }
 
 // The motivation for these tests will be to match existing ripcord functionality rather than to reprove everything works. They are just unit tests comparing to the python script values as we know that works.
@@ -784,7 +810,7 @@ mod tests {
             .unwrap()
             .witness
             .nth(index)
-            .ok_or(FundsRecoveryKitError::from(
+            .ok_or(FundsRecoveryKitInternalError::from(
                 "Transaction witness does not exist in first input",
             ))
             .unwrap();
