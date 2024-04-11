@@ -292,6 +292,13 @@ RustBuffer uniffi_lightspark_crypto_fn_func_sign_ecdsa(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_lightspark_crypto_fn_func_sign_transactions(
+	RustBuffer master_seed,
+	RustBuffer data,
+	RustBuffer network,
+	RustCallStatus* out_status
+);
+
 int8_t uniffi_lightspark_crypto_fn_func_verify_ecdsa(
 	RustBuffer msg,
 	RustBuffer signature_bytes,
@@ -623,6 +630,10 @@ uint16_t uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_ev
 );
 
 uint16_t uniffi_lightspark_crypto_checksum_func_sign_ecdsa(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_lightspark_crypto_checksum_func_sign_transactions(
 	RustCallStatus* out_status
 );
 

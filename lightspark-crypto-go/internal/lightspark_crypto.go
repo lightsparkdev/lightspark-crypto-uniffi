@@ -411,6 +411,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_sign_transactions(uniffiStatus)
+		})
+		if checksum != 40198 {
+			// If this happens try cleaning and rebuilding your project
+			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_sign_transactions: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_lightspark_crypto_checksum_func_verify_ecdsa(uniffiStatus)
 		})
 		if checksum != 51190 {
@@ -1466,6 +1475,106 @@ func (_ FfiDestroyerTypeRemoteSigningResponse) Destroy(value RemoteSigningRespon
 	value.Destroy()
 }
 
+type Response struct {
+	CommitmentTx               string
+	SweepTx                    string
+	HtlcInboundTx              []StringTuple
+	HtlcOutboundTx             []StringTuple
+	CounterpartySweepTx        string
+	CounterpartyHtlcInboundTx  []string
+	CounterpartyHtlcOutboundTx []string
+}
+
+func (r *Response) Destroy() {
+	FfiDestroyerString{}.Destroy(r.CommitmentTx)
+	FfiDestroyerString{}.Destroy(r.SweepTx)
+	FfiDestroyerSequenceTypeStringTuple{}.Destroy(r.HtlcInboundTx)
+	FfiDestroyerSequenceTypeStringTuple{}.Destroy(r.HtlcOutboundTx)
+	FfiDestroyerString{}.Destroy(r.CounterpartySweepTx)
+	FfiDestroyerSequenceString{}.Destroy(r.CounterpartyHtlcInboundTx)
+	FfiDestroyerSequenceString{}.Destroy(r.CounterpartyHtlcOutboundTx)
+}
+
+type FfiConverterTypeResponse struct{}
+
+var FfiConverterTypeResponseINSTANCE = FfiConverterTypeResponse{}
+
+func (c FfiConverterTypeResponse) Lift(rb RustBufferI) Response {
+	return LiftFromRustBuffer[Response](c, rb)
+}
+
+func (c FfiConverterTypeResponse) Read(reader io.Reader) Response {
+	return Response{
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterSequenceTypeStringTupleINSTANCE.Read(reader),
+		FfiConverterSequenceTypeStringTupleINSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterSequenceStringINSTANCE.Read(reader),
+		FfiConverterSequenceStringINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeResponse) Lower(value Response) RustBuffer {
+	return LowerIntoRustBuffer[Response](c, value)
+}
+
+func (c FfiConverterTypeResponse) Write(writer io.Writer, value Response) {
+	FfiConverterStringINSTANCE.Write(writer, value.CommitmentTx)
+	FfiConverterStringINSTANCE.Write(writer, value.SweepTx)
+	FfiConverterSequenceTypeStringTupleINSTANCE.Write(writer, value.HtlcInboundTx)
+	FfiConverterSequenceTypeStringTupleINSTANCE.Write(writer, value.HtlcOutboundTx)
+	FfiConverterStringINSTANCE.Write(writer, value.CounterpartySweepTx)
+	FfiConverterSequenceStringINSTANCE.Write(writer, value.CounterpartyHtlcInboundTx)
+	FfiConverterSequenceStringINSTANCE.Write(writer, value.CounterpartyHtlcOutboundTx)
+}
+
+type FfiDestroyerTypeResponse struct{}
+
+func (_ FfiDestroyerTypeResponse) Destroy(value Response) {
+	value.Destroy()
+}
+
+type StringTuple struct {
+	First  string
+	Second string
+}
+
+func (r *StringTuple) Destroy() {
+	FfiDestroyerString{}.Destroy(r.First)
+	FfiDestroyerString{}.Destroy(r.Second)
+}
+
+type FfiConverterTypeStringTuple struct{}
+
+var FfiConverterTypeStringTupleINSTANCE = FfiConverterTypeStringTuple{}
+
+func (c FfiConverterTypeStringTuple) Lift(rb RustBufferI) StringTuple {
+	return LiftFromRustBuffer[StringTuple](c, rb)
+}
+
+func (c FfiConverterTypeStringTuple) Read(reader io.Reader) StringTuple {
+	return StringTuple{
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeStringTuple) Lower(value StringTuple) RustBuffer {
+	return LowerIntoRustBuffer[StringTuple](c, value)
+}
+
+func (c FfiConverterTypeStringTuple) Write(writer io.Writer, value StringTuple) {
+	FfiConverterStringINSTANCE.Write(writer, value.First)
+	FfiConverterStringINSTANCE.Write(writer, value.Second)
+}
+
+type FfiDestroyerTypeStringTuple struct{}
+
+func (_ FfiDestroyerTypeStringTuple) Destroy(value StringTuple) {
+	value.Destroy()
+}
+
 type CryptoError struct {
 	err error
 }
@@ -1624,6 +1733,85 @@ func (c FfiConverterTypeCryptoError) Write(writer io.Writer, value *CryptoError)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCryptoError.Write", value))
+	}
+}
+
+type FundsRecoveryKitError struct {
+	err error
+}
+
+func (err FundsRecoveryKitError) Error() string {
+	return fmt.Sprintf("FundsRecoveryKitError: %s", err.err.Error())
+}
+
+func (err FundsRecoveryKitError) Unwrap() error {
+	return err.err
+}
+
+// Err* are used for checking error type with `errors.Is`
+var ErrFundsRecoveryKitErrorError = fmt.Errorf("FundsRecoveryKitErrorError")
+
+// Variant structs
+type FundsRecoveryKitErrorError struct {
+	Message string
+}
+
+func NewFundsRecoveryKitErrorError(
+	message string,
+) *FundsRecoveryKitError {
+	return &FundsRecoveryKitError{
+		err: &FundsRecoveryKitErrorError{
+			Message: message,
+		},
+	}
+}
+
+func (err FundsRecoveryKitErrorError) Error() string {
+	return fmt.Sprint("Error",
+		": ",
+
+		"Message=",
+		err.Message,
+	)
+}
+
+func (self FundsRecoveryKitErrorError) Is(target error) bool {
+	return target == ErrFundsRecoveryKitErrorError
+}
+
+type FfiConverterTypeFundsRecoveryKitError struct{}
+
+var FfiConverterTypeFundsRecoveryKitErrorINSTANCE = FfiConverterTypeFundsRecoveryKitError{}
+
+func (c FfiConverterTypeFundsRecoveryKitError) Lift(eb RustBufferI) error {
+	return LiftFromRustBuffer[error](c, eb)
+}
+
+func (c FfiConverterTypeFundsRecoveryKitError) Lower(value *FundsRecoveryKitError) RustBuffer {
+	return LowerIntoRustBuffer[*FundsRecoveryKitError](c, value)
+}
+
+func (c FfiConverterTypeFundsRecoveryKitError) Read(reader io.Reader) error {
+	errorID := readUint32(reader)
+
+	switch errorID {
+	case 1:
+		return &FundsRecoveryKitError{&FundsRecoveryKitErrorError{
+			Message: FfiConverterStringINSTANCE.Read(reader),
+		}}
+	default:
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFundsRecoveryKitError.Read()", errorID))
+	}
+}
+
+func (c FfiConverterTypeFundsRecoveryKitError) Write(writer io.Writer, value *FundsRecoveryKitError) {
+	switch variantValue := value.err.(type) {
+	case *FundsRecoveryKitErrorError:
+		writeInt32(writer, 1)
+		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFundsRecoveryKitError.Write", value))
 	}
 }
 
@@ -2224,6 +2412,92 @@ func (FfiDestroyerSequenceUint8) Destroy(sequence []uint8) {
 	}
 }
 
+type FfiConverterSequenceString struct{}
+
+var FfiConverterSequenceStringINSTANCE = FfiConverterSequenceString{}
+
+func (c FfiConverterSequenceString) Lift(rb RustBufferI) []string {
+	return LiftFromRustBuffer[[]string](c, rb)
+}
+
+func (c FfiConverterSequenceString) Read(reader io.Reader) []string {
+	length := readInt32(reader)
+	if length == 0 {
+		return nil
+	}
+	result := make([]string, 0, length)
+	for i := int32(0); i < length; i++ {
+		result = append(result, FfiConverterStringINSTANCE.Read(reader))
+	}
+	return result
+}
+
+func (c FfiConverterSequenceString) Lower(value []string) RustBuffer {
+	return LowerIntoRustBuffer[[]string](c, value)
+}
+
+func (c FfiConverterSequenceString) Write(writer io.Writer, value []string) {
+	if len(value) > math.MaxInt32 {
+		panic("[]string is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(value)))
+	for _, item := range value {
+		FfiConverterStringINSTANCE.Write(writer, item)
+	}
+}
+
+type FfiDestroyerSequenceString struct{}
+
+func (FfiDestroyerSequenceString) Destroy(sequence []string) {
+	for _, value := range sequence {
+		FfiDestroyerString{}.Destroy(value)
+	}
+}
+
+type FfiConverterSequenceTypeStringTuple struct{}
+
+var FfiConverterSequenceTypeStringTupleINSTANCE = FfiConverterSequenceTypeStringTuple{}
+
+func (c FfiConverterSequenceTypeStringTuple) Lift(rb RustBufferI) []StringTuple {
+	return LiftFromRustBuffer[[]StringTuple](c, rb)
+}
+
+func (c FfiConverterSequenceTypeStringTuple) Read(reader io.Reader) []StringTuple {
+	length := readInt32(reader)
+	if length == 0 {
+		return nil
+	}
+	result := make([]StringTuple, 0, length)
+	for i := int32(0); i < length; i++ {
+		result = append(result, FfiConverterTypeStringTupleINSTANCE.Read(reader))
+	}
+	return result
+}
+
+func (c FfiConverterSequenceTypeStringTuple) Lower(value []StringTuple) RustBuffer {
+	return LowerIntoRustBuffer[[]StringTuple](c, value)
+}
+
+func (c FfiConverterSequenceTypeStringTuple) Write(writer io.Writer, value []StringTuple) {
+	if len(value) > math.MaxInt32 {
+		panic("[]StringTuple is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(value)))
+	for _, item := range value {
+		FfiConverterTypeStringTupleINSTANCE.Write(writer, item)
+	}
+}
+
+type FfiDestroyerSequenceTypeStringTuple struct{}
+
+func (FfiDestroyerSequenceTypeStringTuple) Destroy(sequence []StringTuple) {
+	for _, value := range sequence {
+		FfiDestroyerTypeStringTuple{}.Destroy(value)
+	}
+}
+
 func DecryptEcies(cipherText []uint8, privateKeyBytes []uint8) ([]uint8, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_lightspark_crypto_fn_func_decrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(cipherText), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus)
@@ -2305,6 +2579,18 @@ func SignEcdsa(msg []uint8, privateKeyBytes []uint8) ([]uint8, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterSequenceUint8INSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func SignTransactions(masterSeed string, data string, network Network) (Response, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFundsRecoveryKitError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_lightspark_crypto_fn_func_sign_transactions(FfiConverterStringINSTANCE.Lower(masterSeed), FfiConverterStringINSTANCE.Lower(data), FfiConverterTypeNetworkINSTANCE.Lower(network), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue Response
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeResponseINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
