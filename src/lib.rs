@@ -1,4 +1,5 @@
 pub mod crypto;
+pub mod funds_recovery_kit;
 pub mod remote_signing;
 pub mod signer;
 
@@ -41,6 +42,15 @@ use signer::Mnemonic;
 use signer::Network;
 #[cfg(not(target_arch = "wasm32"))]
 use signer::Seed;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::funds_recovery_kit::sign_transactions;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::funds_recovery_kit::FundsRecoveryKitError;
+#[cfg(not(target_arch = "wasm32"))]
+use funds_recovery_kit::Response;
+#[cfg(not(target_arch = "wasm32"))]
+use funds_recovery_kit::StringTuple;
 
 #[cfg(not(target_arch = "wasm32"))]
 uniffi::include_scaffolding!("lightspark_crypto");
