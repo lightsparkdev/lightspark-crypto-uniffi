@@ -203,16 +203,7 @@ func DecryptEcies(message []byte, privateKey []byte) ([]byte, error) {
 }
 
 func GenerateMultiSigAddress(network BitcoinNetwork, publicKey1 []byte, publicKey2 []byte) (string, error) {
-	var ffiNetwork internal.Network
-
-	switch network {
-	case Mainnet:
-		ffiNetwork = internal.NetworkBitcoin
-	case Testnet:
-		ffiNetwork = internal.NetworkTestnet
-	case Regtest:
-		ffiNetwork = internal.NetworkRegtest
-	}
+	ffiNetwork := toInternalNetwork(network)
 
 	return internal.GenerateMultisigAddress(ffiNetwork, publicKey1, publicKey2)
 }
@@ -225,16 +216,61 @@ func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.Li
 	seed := internal.NewSeed(seedBytes)
 	defer seed.Destroy()
 
-	var ffiNetwork internal.Network
-
-	switch network {
-	case Mainnet:
-		ffiNetwork = internal.NetworkBitcoin
-	case Testnet:
-		ffiNetwork = internal.NetworkTestnet
-	case Regtest:
-		ffiNetwork = internal.NetworkRegtest
-	}
+	ffiNetwork := toInternalNetwork(network)
 
 	return internal.NewLightsparkSigner(seed, ffiNetwork)
+}
+
+type Pair struct {
+	First  string
+	Second string
+}
+
+type FundsRecoveryResponse struct{
+	CommitmentTx string
+	SweepTx string
+	HtlcInboundTx []Pair
+	HtlcOutboundTx []Pair
+	CounterpartyHtlcInboundTx []string
+	CounterpartyHtlcOutboundTx []string
+}
+
+func SignTransactions (masterSeed string, data string, network BitcoinNetwork) (*FundsRecoveryResponse, error) {
+	ffiNetwork := toInternalNetwork(network)
+
+	resp, err := internal.SignTransactions(masterSeed, data, ffiNetwork)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FundsRecoveryResponse{
+		CommitmentTx: resp.CommitmentTx,
+		SweepTx: resp.SweepTx,
+		HtlcInboundTx: toPairArray(resp.HtlcInboundTx),
+		HtlcOutboundTx: toPairArray(resp.HtlcOutboundTx),
+		CounterpartyHtlcInboundTx: resp.CounterpartyHtlcInboundTx,
+		CounterpartyHtlcOutboundTx: resp.CounterpartyHtlcOutboundTx,
+	}, nil
+
+}
+
+func toInternalNetwork(network BitcoinNetwork) internal.Network {
+	switch network {
+	case Mainnet:
+		return internal.NetworkBitcoin
+	case Testnet:
+		return internal.NetworkTestnet
+	case Regtest:
+		return internal.NetworkRegtest
+	default:
+		return internal.NetworkBitcoin
+	}
+}
+
+func toPairArray(array []internal.StringTuple) []Pair {
+	var pairs []Pair
+	for _, pair := range array {
+		pairs = append(pairs, Pair{First: pair.First, Second: pair.Second})
+	}
+	return pairs
 }
