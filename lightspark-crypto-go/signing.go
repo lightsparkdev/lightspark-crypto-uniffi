@@ -231,6 +231,7 @@ type FundsRecoveryResponse struct{
 	SweepTx string
 	HtlcInboundTx []Pair
 	HtlcOutboundTx []Pair
+	CounterpartySweepTx string
 	CounterpartyHtlcInboundTx []string
 	CounterpartyHtlcOutboundTx []string
 }
@@ -248,6 +249,7 @@ func SignTransactions (masterSeed string, data string, network BitcoinNetwork) (
 		SweepTx: resp.SweepTx,
 		HtlcInboundTx: toPairArray(resp.HtlcInboundTx),
 		HtlcOutboundTx: toPairArray(resp.HtlcOutboundTx),
+		CounterpartySweepTx: resp.CounterpartySweepTx,
 		CounterpartyHtlcInboundTx: resp.CounterpartyHtlcInboundTx,
 		CounterpartyHtlcOutboundTx: resp.CounterpartyHtlcOutboundTx,
 	}, nil
