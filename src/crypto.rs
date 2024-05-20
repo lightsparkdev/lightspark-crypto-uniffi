@@ -3,7 +3,7 @@ use std::str::FromStr as _;
 use std::sync::Arc;
 
 use bitcoin::bip32::{DerivationPath, Xpub};
-use bitcoin::hashes::sha256;
+use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::ecdsa::Signature;
 use bitcoin::secp256k1::{Message, PublicKey, Scalar, Secp256k1, SecretKey};
 use bitcoin::{
@@ -18,7 +18,7 @@ use crate::signer::Network;
 #[derive(Clone, Copy, Debug)]
 pub enum CryptoError {
     Secp256k1Error(bitcoin::secp256k1::Error),
-    RustSecp256k1Error(ecies::SecpError),
+    RustSecp256k1Error,
     InvalidPublicKeyScriptError,
     KeyDerivationError,
     KeyTweakError,
@@ -44,7 +44,7 @@ impl fmt::Display for CryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Secp256k1Error(err) => write!(f, "Secp256k1 error {}", err),
-            Self::RustSecp256k1Error(err) => write!(f, "Rust Secp256k1 error {}", err),
+            Self::RustSecp256k1Error => write!(f, "Rust Secp256k1 error"),
             Self::InvalidPublicKeyScriptError => write!(f, "Invalid public key script"),
             Self::KeyDerivationError => write!(f, "Key derivation error"),
             Self::KeyTweakError => write!(f, "Key tweak error"),
@@ -57,7 +57,8 @@ impl std::error::Error for CryptoError {}
 pub fn sign_ecdsa(msg: Vec<u8>, private_key_bytes: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
     let secp = Secp256k1::new();
     let sk = SecretKey::from_slice(&private_key_bytes).map_err(CryptoError::Secp256k1Error)?;
-    let msg = Message::from_hashed_data::<sha256::Hash>(&msg);
+    let digest = sha256::Hash::hash(&msg);
+    let msg = Message::from_digest(digest.to_byte_array());
     let signature = secp.sign_ecdsa(&msg, &sk);
     Ok(signature.serialize_der().to_vec())
 }
@@ -69,21 +70,22 @@ pub fn verify_ecdsa(
 ) -> Result<bool, CryptoError> {
     let secp = Secp256k1::new();
     let pk = PublicKey::from_slice(&public_key_bytes).map_err(CryptoError::Secp256k1Error)?;
-    let msg = Message::from_hashed_data::<sha256::Hash>(&msg);
+    let digest = sha256::Hash::hash(&msg);
+    let msg = Message::from_digest(digest.to_byte_array());
     let sig = Signature::from_der(&signature_bytes).map_err(CryptoError::Secp256k1Error)?;
     let result = secp.verify_ecdsa(&msg, &sig, &pk).is_ok();
     Ok(result)
 }
 
 pub fn encrypt_ecies(msg: Vec<u8>, public_key_bytes: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
-    encrypt(&public_key_bytes, &msg).map_err(CryptoError::RustSecp256k1Error)
+    encrypt(&public_key_bytes, &msg).map_err(|_| CryptoError::RustSecp256k1Error)
 }
 
 pub fn decrypt_ecies(
     cipher_text: Vec<u8>,
     private_key_bytes: Vec<u8>,
 ) -> Result<Vec<u8>, CryptoError> {
-    decrypt(&private_key_bytes, &cipher_text).map_err(CryptoError::RustSecp256k1Error)
+    decrypt(&private_key_bytes, &cipher_text).map_err(|_| CryptoError::RustSecp256k1Error)
 }
 
 pub fn generate_keypair() -> Result<Arc<KeyPair>, CryptoError> {
