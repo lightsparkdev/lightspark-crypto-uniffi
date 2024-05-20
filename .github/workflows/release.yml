@@ -82,7 +82,7 @@ jobs:
         with:
           name: lightspark-cryptoFFI-kotlin
       - name: Create release
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
         with:
           artifacts: "./lightspark-cryptoFFI*"
           tag: ${{ inputs.version }}
