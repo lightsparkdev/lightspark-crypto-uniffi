@@ -3,10 +3,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use bitcoin::bip32::{DerivationPath, Xpriv, Xpub};
-use bitcoin::hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine};
+use bitcoin::hashes::{sha256, sha512, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::secp256k1::ecdh::SharedSecret;
 use bitcoin::secp256k1::ecdsa::Signature;
-use bitcoin::secp256k1::hashes::sha256;
 use bitcoin::secp256k1::{Message, PublicKey, Scalar, Secp256k1, SecretKey};
 use rand_core::{OsRng, RngCore};
 use wasm_bindgen::prelude::*;
@@ -199,7 +198,8 @@ impl LightsparkSigner {
                 secp.sign_ecdsa(&msg, &signing_key)
             }
             false => {
-                let msg = Message::from_hashed_data::<sha256::Hash>(message.as_slice());
+                let digest = sha256::Hash::hash(&message);
+                let msg = Message::from_digest(digest.to_byte_array());
                 secp.sign_ecdsa(&msg, &signing_key)
             }
         };
@@ -375,7 +375,8 @@ impl LightsparkSigner {
         unsigned_invoice: String,
     ) -> Result<Arc<InvoiceSignature>, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_hashed_data::<sha256::Hash>(unsigned_invoice.as_bytes());
+        let digest = sha256::Hash::hash(unsigned_invoice.as_bytes());
+        let msg = Message::from_digest(digest.to_byte_array());
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
@@ -413,7 +414,8 @@ impl LightsparkSigner {
         unsigned_invoice: String,
     ) -> Result<InvoiceSignature, LightsparkSignerError> {
         let signing_key = self.node_private_key.private_key;
-        let msg = Message::from_hashed_data::<sha256::Hash>(unsigned_invoice.as_bytes());
+        let digest = sha256::Hash::hash(unsigned_invoice.as_bytes());
+        let msg = Message::from_digest(*digest.as_byte_array());
         let secp = Secp256k1::new();
         let sig = secp
             .sign_ecdsa_recoverable(&msg, &signing_key)
@@ -504,7 +506,8 @@ mod tests {
             .derive_key_and_sign(message.to_vec(), "m".to_owned(), false, None, None)
             .unwrap();
         let signature = Signature::from_compact(signature_bytes.as_slice()).unwrap();
-        let msg = Message::from_hashed_data::<sha256::Hash>(message);
+        let digest = sha256::Hash::hash(message);
+        let msg = Message::from_digest(digest.to_byte_array());
         let secp = Secp256k1::new();
         assert!(secp
             .verify_ecdsa(&msg, &signature, &verification_key)

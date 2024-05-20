@@ -1,6 +1,5 @@
 use std::fmt;
 
-use bitcoin::bip32;
 use bitcoin::consensus::encode;
 use bitcoin::hashes::hex::FromHex;
 use bitcoin::hashes::{sha512, Hash, HashEngine, Hmac, HmacEngine};
@@ -8,8 +7,8 @@ use bitcoin::secp256k1::{Scalar, Secp256k1, SecretKey};
 use bitcoin::sighash;
 use bitcoin::sighash::EcdsaSighashType;
 use bitcoin::PrivateKey;
-use bitcoin::PublicKey;
 use bitcoin::Witness;
+use bitcoin::{bip32, CompressedPublicKey};
 use bitcoin::{Amount, Script, Transaction};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -542,12 +541,10 @@ fn sign_counterparty_sweep_transaction(
         ))?
         .witness
         .to_vec();
-    let pubkey = PublicKey::from_slice(new_witness[1].as_slice()).map_err(|_| {
+    let pubkey = CompressedPublicKey::from_slice(new_witness[1].as_slice()).map_err(|_| {
         FundsRecoveryKitInternalError::from("Could not generate pubkey from witness")
     })?;
-    let script = bitcoin::Address::p2wpkh(&pubkey, network)
-        .unwrap()
-        .script_pubkey();
+    let script = bitcoin::Address::p2wpkh(&pubkey, network).script_pubkey();
     let sighash = sighash::SighashCache::new(transaction.clone())
         .p2wpkh_signature_hash(0, &script, amount, EcdsaSighashType::All)
         .map_err(|e| FundsRecoveryKitInternalError::from(e.to_string().as_str()))?;
