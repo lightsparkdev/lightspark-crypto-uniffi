@@ -72,6 +72,8 @@ jobs:
     name: Create release and tag
     needs: [build-kotlin, build-swift]
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Download ios artifacts
         uses: actions/download-artifact@v3
@@ -82,10 +84,9 @@ jobs:
         with:
           name: lightspark-cryptoFFI-kotlin
       - name: Create release
-        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
+        uses: ncipollo/release-action@v1
         with:
           artifacts: "./lightspark-cryptoFFI*"
           tag: ${{ inputs.version }}
-          token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ inputs.version }}
           prerelease: true
