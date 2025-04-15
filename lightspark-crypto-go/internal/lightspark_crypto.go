@@ -15,60 +15,67 @@ import (
 	"unsafe"
 )
 
-type RustBuffer = C.RustBuffer
+// This is needed, because as of go 1.24
+// type RustBuffer C.RustBuffer cannot have methods,
+// RustBuffer is treated as non-local type
+type GoRustBuffer struct {
+	inner C.RustBuffer
+}
 
 type RustBufferI interface {
 	AsReader() *bytes.Reader
 	Free()
 	ToGoBytes() []byte
 	Data() unsafe.Pointer
-	Len() int
-	Capacity() int
+	Len() uint64
+	Capacity() uint64
 }
 
-func RustBufferFromExternal(b RustBufferI) RustBuffer {
-	return RustBuffer{
-		capacity: C.int(b.Capacity()),
-		len:      C.int(b.Len()),
-		data:     (*C.uchar)(b.Data()),
+func RustBufferFromExternal(b RustBufferI) GoRustBuffer {
+	return GoRustBuffer{
+		inner: C.RustBuffer{
+			capacity: C.uint64_t(b.Capacity()),
+			len:      C.uint64_t(b.Len()),
+			data:     (*C.uchar)(b.Data()),
+		},
 	}
 }
 
-func (cb RustBuffer) Capacity() int {
-	return int(cb.capacity)
+func (cb GoRustBuffer) Capacity() uint64 {
+	return uint64(cb.inner.capacity)
 }
 
-func (cb RustBuffer) Len() int {
-	return int(cb.len)
+func (cb GoRustBuffer) Len() uint64 {
+	return uint64(cb.inner.len)
 }
 
-func (cb RustBuffer) Data() unsafe.Pointer {
-	return unsafe.Pointer(cb.data)
+func (cb GoRustBuffer) Data() unsafe.Pointer {
+	return unsafe.Pointer(cb.inner.data)
 }
 
-func (cb RustBuffer) AsReader() *bytes.Reader {
-	b := unsafe.Slice((*byte)(cb.data), C.int(cb.len))
+func (cb GoRustBuffer) AsReader() *bytes.Reader {
+	b := unsafe.Slice((*byte)(cb.inner.data), C.uint64_t(cb.inner.len))
 	return bytes.NewReader(b)
 }
 
-func (cb RustBuffer) Free() {
+func (cb GoRustBuffer) Free() {
 	rustCall(func(status *C.RustCallStatus) bool {
-		C.ffi_lightspark_crypto_rustbuffer_free(cb, status)
+		C.ffi_lightspark_crypto_rustbuffer_free(cb.inner, status)
 		return false
 	})
 }
 
-func (cb RustBuffer) ToGoBytes() []byte {
-	return C.GoBytes(unsafe.Pointer(cb.data), C.int(cb.len))
+func (cb GoRustBuffer) ToGoBytes() []byte {
+	return C.GoBytes(unsafe.Pointer(cb.inner.data), C.int(cb.inner.len))
 }
 
-func stringToRustBuffer(str string) RustBuffer {
+func stringToRustBuffer(str string) C.RustBuffer {
 	return bytesToRustBuffer([]byte(str))
 }
 
-func bytesToRustBuffer(b []byte) RustBuffer {
+func bytesToRustBuffer(b []byte) C.RustBuffer {
 	if len(b) == 0 {
-		return RustBuffer{}
+		return C.RustBuffer{}
 	}
 	// We can pass the pointer along here, as it is pinned
 	// for the duration of this call
@@ -77,7 +84,7 @@ func bytesToRustBuffer(b []byte) RustBuffer {
 		data: (*C.uchar)(unsafe.Pointer(&b[0])),
 	}
 
-	return rustCall(func(status *C.RustCallStatus) RustBuffer {
+	return rustCall(func(status *C.RustCallStatus) C.RustBuffer {
 		return C.ffi_lightspark_crypto_rustbuffer_from_bytes(foreign, status)
 	})
 }
@@ -87,12 +94,7 @@ type BufLifter[GoType any] interface {
 }
 
 type BufLowerer[GoType any] interface {
-	Lower(value GoType) RustBuffer
-}
-
-type FfiConverter[GoType any, FfiType any] interface {
-	Lift(value FfiType) GoType
-	Lower(value GoType) FfiType
+	Lower(value GoType) C.RustBuffer
 }
 
 type BufReader[GoType any] interface {
@@ -103,12 +105,7 @@ type BufWriter[GoType any] interface {
 	Write(writer io.Writer, value GoType)
 }
 
-type FfiRustBufConverter[GoType any, FfiType any] interface {
-	FfiConverter[GoType, FfiType]
-	BufReader[GoType]
-}
-
-func LowerIntoRustBuffer[GoType any](bufWriter BufWriter[GoType], value GoType) RustBuffer {
+func LowerIntoRustBuffer[GoType any](bufWriter BufWriter[GoType], value GoType) C.RustBuffer {
 	// This might be not the most efficient way but it does not require knowing allocation size
 	// beforehand
 	var buffer bytes.Buffer
@@ -133,31 +130,30 @@ func LiftFromRustBuffer[GoType any](bufReader BufReader[GoType], rbuf RustBuffer
 	return item
 }
 
-func rustCallWithError[U any](converter BufLifter[error], callback func(*C.RustCallStatus) U) (U, error) {
+func rustCallWithError[E any, U any](converter BufReader[*E], callback func(*C.RustCallStatus) U) (U, *E) {
 	var status C.RustCallStatus
 	returnValue := callback(&status)
 	err := checkCallStatus(converter, status)
-
 	return returnValue, err
 }
 
-func checkCallStatus(converter BufLifter[error], status C.RustCallStatus) error {
+func checkCallStatus[E any](converter BufReader[*E], status C.RustCallStatus) *E {
 	switch status.code {
 	case 0:
 		return nil
 	case 1:
-		return converter.Lift(status.errorBuf)
+		return LiftFromRustBuffer(converter, GoRustBuffer{inner: status.errorBuf})
 	case 2:
-		// when the rust code sees a panic, it tries to construct a rustbuffer
+		// when the rust code sees a panic, it tries to construct a rustBuffer
 		// with the message.  but if that code panics, then it just sends back
 		// an empty buffer.
 		if status.errorBuf.len > 0 {
-			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(status.errorBuf)))
+			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(GoRustBuffer{inner: status.errorBuf})))
 		} else {
 			panic(fmt.Errorf("Rust panicked while handling Rust panic"))
 		}
 	default:
-		return fmt.Errorf("unknown status code: %d", status.code)
+		panic(fmt.Errorf("unknown status code: %d", status.code))
 	}
 }
 
@@ -168,11 +164,13 @@ func checkCallStatusUnknown(status C.RustCallStatus) error {
 	case 1:
 		panic(fmt.Errorf("function not returning an error returned an error"))
 	case 2:
-		// when the rust code sees a panic, it tries to construct a rustbuffer
+		// when the rust code sees a panic, it tries to construct a C.RustBuffer
 		// with the message.  but if that code panics, then it just sends back
 		// an empty buffer.
 		if status.errorBuf.len > 0 {
-			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(status.errorBuf)))
+			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(GoRustBuffer{
+				inner: status.errorBuf,
+			})))
 		} else {
 			panic(fmt.Errorf("Rust panicked while handling Rust panic"))
 		}
@@ -182,11 +180,15 @@ func checkCallStatusUnknown(status C.RustCallStatus) error {
 }
 
 func rustCall[U any](callback func(*C.RustCallStatus) U) U {
-	returnValue, err := rustCallWithError(nil, callback)
+	returnValue, err := rustCallWithError[error](nil, callback)
 	if err != nil {
 		panic(err)
 	}
 	return returnValue
+}
+
+type NativeError interface {
+	AsError() error
 }
 
 func writeInt8(writer io.Writer, value int8) {
@@ -331,105 +333,105 @@ func readFloat64(reader io.Reader) float64 {
 
 func init() {
 
-	(&FfiConverterCallbackInterfaceValidation{}).register()
+	FfiConverterCallbackInterfaceValidationINSTANCE.register()
 	uniffiCheckChecksums()
 }
 
 func uniffiCheckChecksums() {
 	// Get the bindings contract version from our ComponentInterface
-	bindingsContractVersion := 24
+	bindingsContractVersion := 26
 	// Get the scaffolding contract version by calling the into the dylib
-	scaffoldingContractVersion := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint32_t {
-		return C.ffi_lightspark_crypto_uniffi_contract_version(uniffiStatus)
+	scaffoldingContractVersion := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint32_t {
+		return C.ffi_lightspark_crypto_uniffi_contract_version()
 	})
 	if bindingsContractVersion != int(scaffoldingContractVersion) {
 		// If this happens try cleaning and rebuilding your project
 		panic("lightspark_crypto: UniFFI contract version mismatch")
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_decrypt_ecies(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_decrypt_ecies()
 		})
-		if checksum != 32002 {
+		if checksum != 62746 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_decrypt_ecies: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey()
 		})
-		if checksum != 44901 {
+		if checksum != 7253 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_encrypt_ecies(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_encrypt_ecies()
 		})
-		if checksum != 57526 {
+		if checksum != 31354 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_encrypt_ecies: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_generate_keypair(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_generate_keypair()
 		})
-		if checksum != 35394 {
+		if checksum != 29546 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_generate_keypair: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_generate_multisig_address(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_generate_multisig_address()
 		})
-		if checksum != 10348 {
+		if checksum != 29280 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_generate_multisig_address: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_event(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_event()
 		})
-		if checksum != 38991 {
+		if checksum != 25210 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_event: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_sign_ecdsa(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_sign_ecdsa()
 		})
-		if checksum != 6804 {
+		if checksum != 48775 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_sign_ecdsa: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_sign_transactions(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_sign_transactions()
 		})
-		if checksum != 40198 {
+		if checksum != 61436 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_sign_transactions: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_func_verify_ecdsa(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_func_verify_ecdsa()
 		})
-		if checksum != 51190 {
+		if checksum != 12896 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_func_verify_ecdsa: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_invoicesignature_get_recovery_id(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_invoicesignature_get_recovery_id()
 		})
 		if checksum != 44059 {
 			// If this happens try cleaning and rebuilding your project
@@ -437,152 +439,152 @@ func uniffiCheckChecksums() {
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_invoicesignature_get_signature(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_invoicesignature_get_signature()
 		})
-		if checksum != 1363 {
+		if checksum != 65194 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_invoicesignature_get_signature: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_keypair_get_private_key(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_keypair_get_private_key()
 		})
-		if checksum != 333 {
+		if checksum != 39898 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_keypair_get_private_key: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_keypair_get_public_key(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_keypair_get_public_key()
 		})
-		if checksum != 28794 {
+		if checksum != 58044 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_keypair_get_public_key: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_key_and_sign(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_key_and_sign()
 		})
-		if checksum != 55840 {
+		if checksum != 23586 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_key_and_sign: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_private_key(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_private_key()
 		})
-		if checksum != 44534 {
+		if checksum != 31066 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_private_key: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key()
 		})
-		if checksum != 1950 {
+		if checksum != 30268 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key_hex(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key_hex()
 		})
-		if checksum != 47918 {
+		if checksum != 50577 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key_hex: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_ecdh(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_ecdh()
 		})
-		if checksum != 65526 {
+		if checksum != 32074 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_ecdh: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage()
 		})
-		if checksum != 10846 {
+		if checksum != 47060 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_hash(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_hash()
 		})
-		if checksum != 12248 {
+		if checksum != 1113 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_hash: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_nonce(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_nonce()
 		})
-		if checksum != 2599 {
+		if checksum != 62865 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_nonce: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_master_public_key(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_master_public_key()
 		})
-		if checksum != 48490 {
+		if checksum != 1498 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_master_public_key: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_per_commitment_point(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_per_commitment_point()
 		})
-		if checksum != 55465 {
+		if checksum != 6371 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_per_commitment_point: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_release_per_commitment_secret(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_release_per_commitment_secret()
 		})
-		if checksum != 25475 {
+		if checksum != 30587 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_release_per_commitment_secret: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice()
 		})
-		if checksum != 19232 {
+		if checksum != 57527 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice_hash(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice_hash()
 		})
-		if checksum != 11162 {
+		if checksum != 60231 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice_hash: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_mnemonic_as_string(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_mnemonic_as_string()
 		})
 		if checksum != 15466 {
 			// If this happens try cleaning and rebuilding your project
@@ -590,80 +592,80 @@ func uniffiCheckChecksums() {
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_seed_as_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_seed_as_bytes()
 		})
-		if checksum != 32338 {
+		if checksum != 10620 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_method_seed_as_bytes: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_from_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_from_bytes()
 		})
-		if checksum != 57207 {
+		if checksum != 18875 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_from_bytes: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_new(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_new()
 		})
-		if checksum != 65101 {
+		if checksum != 62085 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_new: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_entropy(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_entropy()
 		})
-		if checksum != 54958 {
+		if checksum != 22084 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_entropy: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_phrase(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_phrase()
 		})
-		if checksum != 46204 {
+		if checksum != 1036 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_phrase: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_random(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_mnemonic_random()
 		})
-		if checksum != 3686 {
+		if checksum != 33232 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_mnemonic_random: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_seed_from_mnemonic(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_seed_from_mnemonic()
 		})
-		if checksum != 17860 {
+		if checksum != 35470 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_seed_from_mnemonic: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_constructor_seed_new(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_constructor_seed_new()
 		})
-		if checksum != 15664 {
+		if checksum != 28284 {
 			// If this happens try cleaning and rebuilding your project
 			panic("lightspark_crypto: uniffi_lightspark_crypto_checksum_constructor_seed_new: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_lightspark_crypto_checksum_method_validation_should_sign(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_lightspark_crypto_checksum_method_validation_should_sign()
 		})
 		if checksum != 52762 {
 			// If this happens try cleaning and rebuilding your project
@@ -802,7 +804,7 @@ func (FfiConverterString) Read(reader io.Reader) string {
 	return string(buffer)
 }
 
-func (FfiConverterString) Lower(value string) RustBuffer {
+func (FfiConverterString) Lower(value string) C.RustBuffer {
 	return stringToRustBuffer(value)
 }
 
@@ -829,16 +831,22 @@ func (FfiDestroyerString) Destroy(_ string) {}
 // https://github.com/mozilla/uniffi-rs/blob/0dc031132d9493ca812c3af6e7dd60ad2ea95bf0/uniffi_bindgen/src/bindings/kotlin/templates/ObjectRuntime.kt#L31
 
 type FfiObject struct {
-	pointer      unsafe.Pointer
-	callCounter  atomic.Int64
-	freeFunction func(unsafe.Pointer, *C.RustCallStatus)
-	destroyed    atomic.Bool
+	pointer       unsafe.Pointer
+	callCounter   atomic.Int64
+	cloneFunction func(unsafe.Pointer, *C.RustCallStatus) unsafe.Pointer
+	freeFunction  func(unsafe.Pointer, *C.RustCallStatus)
+	destroyed     atomic.Bool
 }
 
-func newFfiObject(pointer unsafe.Pointer, freeFunction func(unsafe.Pointer, *C.RustCallStatus)) FfiObject {
+func newFfiObject(
+	pointer unsafe.Pointer,
+	cloneFunction func(unsafe.Pointer, *C.RustCallStatus) unsafe.Pointer,
+	freeFunction func(unsafe.Pointer, *C.RustCallStatus),
+) FfiObject {
 	return FfiObject{
-		pointer:      pointer,
-		freeFunction: freeFunction,
+		pointer:       pointer,
+		cloneFunction: cloneFunction,
+		freeFunction:  freeFunction,
 	}
 }
 
@@ -856,7 +864,9 @@ func (ffiObject *FfiObject) incrementPointer(debugName string) unsafe.Pointer {
 		}
 	}
 
-	return ffiObject.pointer
+	return rustCall(func(status *C.RustCallStatus) unsafe.Pointer {
+		return ffiObject.cloneFunction(ffiObject.pointer, status)
+	})
 }
 
 func (ffiObject *FfiObject) decrementPointer() {
@@ -880,6 +890,10 @@ func (ffiObject *FfiObject) freeRustArcPtr() {
 	})
 }
 
+type InvoiceSignatureInterface interface {
+	GetRecoveryId() int32
+	GetSignature() []uint8
+}
 type InvoiceSignature struct {
 	ffiObject FfiObject
 }
@@ -897,11 +911,12 @@ func (_self *InvoiceSignature) GetSignature() []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*InvoiceSignature")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterSequenceUint8INSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_invoicesignature_get_signature(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_invoicesignature_get_signature(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *InvoiceSignature) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -915,9 +930,13 @@ func (c FfiConverterInvoiceSignature) Lift(pointer unsafe.Pointer) *InvoiceSigna
 	result := &InvoiceSignature{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_lightspark_crypto_fn_clone_invoicesignature(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_lightspark_crypto_fn_free_invoicesignature(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*InvoiceSignature).Destroy)
 	return result
@@ -934,6 +953,7 @@ func (c FfiConverterInvoiceSignature) Lower(value *InvoiceSignature) unsafe.Poin
 	pointer := value.ffiObject.incrementPointer("*InvoiceSignature")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterInvoiceSignature) Write(writer io.Writer, value *InvoiceSignature) {
@@ -946,6 +966,10 @@ func (_ FfiDestroyerInvoiceSignature) Destroy(value *InvoiceSignature) {
 	value.Destroy()
 }
 
+type KeyPairInterface interface {
+	GetPrivateKey() []uint8
+	GetPublicKey() []uint8
+}
 type KeyPair struct {
 	ffiObject FfiObject
 }
@@ -954,8 +978,10 @@ func (_self *KeyPair) GetPrivateKey() []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*KeyPair")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterSequenceUint8INSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_keypair_get_private_key(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_keypair_get_private_key(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
 
@@ -963,11 +989,12 @@ func (_self *KeyPair) GetPublicKey() []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*KeyPair")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterSequenceUint8INSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_keypair_get_public_key(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_keypair_get_public_key(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *KeyPair) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -981,9 +1008,13 @@ func (c FfiConverterKeyPair) Lift(pointer unsafe.Pointer) *KeyPair {
 	result := &KeyPair{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_lightspark_crypto_fn_clone_keypair(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_lightspark_crypto_fn_free_keypair(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*KeyPair).Destroy)
 	return result
@@ -1000,6 +1031,7 @@ func (c FfiConverterKeyPair) Lower(value *KeyPair) unsafe.Pointer {
 	pointer := value.ffiObject.incrementPointer("*KeyPair")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterKeyPair) Write(writer io.Writer, value *KeyPair) {
@@ -1012,13 +1044,28 @@ func (_ FfiDestroyerKeyPair) Destroy(value *KeyPair) {
 	value.Destroy()
 }
 
+type LightsparkSignerInterface interface {
+	DeriveKeyAndSign(message []uint8, derivationPath string, isRaw bool, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, *LightsparkSignerError)
+	DerivePrivateKey(derivationPath string) (string, *LightsparkSignerError)
+	DerivePublicKey(derivationPath string) (string, *LightsparkSignerError)
+	DerivePublicKeyHex(derivationPath string) (string, *LightsparkSignerError)
+	Ecdh(publicKey []uint8) ([]uint8, *LightsparkSignerError)
+	GeneratePreimage(nonce []uint8) ([]uint8, *LightsparkSignerError)
+	GeneratePreimageHash(nonce []uint8) ([]uint8, *LightsparkSignerError)
+	GeneratePreimageNonce() []uint8
+	GetMasterPublicKey() (string, *LightsparkSignerError)
+	GetPerCommitmentPoint(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, *LightsparkSignerError)
+	ReleasePerCommitmentSecret(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, *LightsparkSignerError)
+	SignInvoice(unsignedInvoice string) (*InvoiceSignature, *LightsparkSignerError)
+	SignInvoiceHash(unsignedInvoice []uint8) (*InvoiceSignature, *LightsparkSignerError)
+}
 type LightsparkSigner struct {
 	ffiObject FfiObject
 }
 
-func NewLightsparkSigner(seed *Seed, network Network) (*LightsparkSigner, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_lightspark_crypto_fn_constructor_lightsparksigner_new(FfiConverterSeedINSTANCE.Lower(seed), FfiConverterTypeNetworkINSTANCE.Lower(network), _uniffiStatus)
+func NewLightsparkSigner(seed *Seed, network Network) (*LightsparkSigner, *LightsparkSignerError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_lightspark_crypto_fn_constructor_lightsparksigner_new(FfiConverterSeedINSTANCE.Lower(seed), FfiConverterNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *LightsparkSigner
@@ -1028,9 +1075,9 @@ func NewLightsparkSigner(seed *Seed, network Network) (*LightsparkSigner, error)
 	}
 }
 
-func LightsparkSignerFromBytes(seed []uint8, network Network) (*LightsparkSigner, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_lightspark_crypto_fn_constructor_lightsparksigner_from_bytes(FfiConverterSequenceUint8INSTANCE.Lower(seed), FfiConverterTypeNetworkINSTANCE.Lower(network), _uniffiStatus)
+func LightsparkSignerFromBytes(seed []uint8, network Network) (*LightsparkSigner, *LightsparkSignerError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_lightspark_crypto_fn_constructor_lightsparksigner_from_bytes(FfiConverterSequenceUint8INSTANCE.Lower(seed), FfiConverterNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *LightsparkSigner
@@ -1040,12 +1087,14 @@ func LightsparkSignerFromBytes(seed []uint8, network Network) (*LightsparkSigner
 	}
 }
 
-func (_self *LightsparkSigner) DeriveKeyAndSign(message []uint8, derivationPath string, isRaw bool, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
+func (_self *LightsparkSigner) DeriveKeyAndSign(message []uint8, derivationPath string, isRaw bool, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_key_and_sign(
-			_pointer, FfiConverterSequenceUint8INSTANCE.Lower(message), FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterBoolINSTANCE.Lower(isRaw), FfiConverterOptionalSequenceUint8INSTANCE.Lower(addTweak), FfiConverterOptionalSequenceUint8INSTANCE.Lower(mulTweak), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_key_and_sign(
+				_pointer, FfiConverterSequenceUint8INSTANCE.Lower(message), FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterBoolINSTANCE.Lower(isRaw), FfiConverterOptionalSequenceUint8INSTANCE.Lower(addTweak), FfiConverterOptionalSequenceUint8INSTANCE.Lower(mulTweak), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1055,12 +1104,14 @@ func (_self *LightsparkSigner) DeriveKeyAndSign(message []uint8, derivationPath 
 	}
 }
 
-func (_self *LightsparkSigner) DerivePrivateKey(derivationPath string) (string, error) {
+func (_self *LightsparkSigner) DerivePrivateKey(derivationPath string) (string, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_private_key(
-			_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_private_key(
+				_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -1070,12 +1121,14 @@ func (_self *LightsparkSigner) DerivePrivateKey(derivationPath string) (string, 
 	}
 }
 
-func (_self *LightsparkSigner) DerivePublicKey(derivationPath string) (string, error) {
+func (_self *LightsparkSigner) DerivePublicKey(derivationPath string) (string, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key(
-			_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key(
+				_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -1085,12 +1138,14 @@ func (_self *LightsparkSigner) DerivePublicKey(derivationPath string) (string, e
 	}
 }
 
-func (_self *LightsparkSigner) DerivePublicKeyHex(derivationPath string) (string, error) {
+func (_self *LightsparkSigner) DerivePublicKeyHex(derivationPath string) (string, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key_hex(
-			_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key_hex(
+				_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -1100,12 +1155,14 @@ func (_self *LightsparkSigner) DerivePublicKeyHex(derivationPath string) (string
 	}
 }
 
-func (_self *LightsparkSigner) Ecdh(publicKey []uint8) ([]uint8, error) {
+func (_self *LightsparkSigner) Ecdh(publicKey []uint8) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_ecdh(
-			_pointer, FfiConverterSequenceUint8INSTANCE.Lower(publicKey), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_ecdh(
+				_pointer, FfiConverterSequenceUint8INSTANCE.Lower(publicKey), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1115,12 +1172,14 @@ func (_self *LightsparkSigner) Ecdh(publicKey []uint8) ([]uint8, error) {
 	}
 }
 
-func (_self *LightsparkSigner) GeneratePreimage(nonce []uint8) ([]uint8, error) {
+func (_self *LightsparkSigner) GeneratePreimage(nonce []uint8) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage(
-			_pointer, FfiConverterSequenceUint8INSTANCE.Lower(nonce), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage(
+				_pointer, FfiConverterSequenceUint8INSTANCE.Lower(nonce), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1130,12 +1189,14 @@ func (_self *LightsparkSigner) GeneratePreimage(nonce []uint8) ([]uint8, error) 
 	}
 }
 
-func (_self *LightsparkSigner) GeneratePreimageHash(nonce []uint8) ([]uint8, error) {
+func (_self *LightsparkSigner) GeneratePreimageHash(nonce []uint8) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_hash(
-			_pointer, FfiConverterSequenceUint8INSTANCE.Lower(nonce), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_hash(
+				_pointer, FfiConverterSequenceUint8INSTANCE.Lower(nonce), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1149,17 +1210,21 @@ func (_self *LightsparkSigner) GeneratePreimageNonce() []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterSequenceUint8INSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_nonce(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_nonce(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
 
-func (_self *LightsparkSigner) GetMasterPublicKey() (string, error) {
+func (_self *LightsparkSigner) GetMasterPublicKey() (string, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_get_master_public_key(
-			_pointer, _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_get_master_public_key(
+				_pointer, _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -1169,12 +1234,14 @@ func (_self *LightsparkSigner) GetMasterPublicKey() (string, error) {
 	}
 }
 
-func (_self *LightsparkSigner) GetPerCommitmentPoint(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, error) {
+func (_self *LightsparkSigner) GetPerCommitmentPoint(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_get_per_commitment_point(
-			_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterUint64INSTANCE.Lower(perCommitmentPointIdx), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_get_per_commitment_point(
+				_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterUint64INSTANCE.Lower(perCommitmentPointIdx), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1184,12 +1251,14 @@ func (_self *LightsparkSigner) GetPerCommitmentPoint(derivationPath string, perC
 	}
 }
 
-func (_self *LightsparkSigner) ReleasePerCommitmentSecret(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, error) {
+func (_self *LightsparkSigner) ReleasePerCommitmentSecret(derivationPath string, perCommitmentPointIdx uint64) ([]uint8, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_release_per_commitment_secret(
-			_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterUint64INSTANCE.Lower(perCommitmentPointIdx), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_lightsparksigner_release_per_commitment_secret(
+				_pointer, FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterUint64INSTANCE.Lower(perCommitmentPointIdx), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -1199,10 +1268,10 @@ func (_self *LightsparkSigner) ReleasePerCommitmentSecret(derivationPath string,
 	}
 }
 
-func (_self *LightsparkSigner) SignInvoice(unsignedInvoice string) (*InvoiceSignature, error) {
+func (_self *LightsparkSigner) SignInvoice(unsignedInvoice string) (*InvoiceSignature, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice(
 			_pointer, FfiConverterStringINSTANCE.Lower(unsignedInvoice), _uniffiStatus)
 	})
@@ -1214,10 +1283,10 @@ func (_self *LightsparkSigner) SignInvoice(unsignedInvoice string) (*InvoiceSign
 	}
 }
 
-func (_self *LightsparkSigner) SignInvoiceHash(unsignedInvoice []uint8) (*InvoiceSignature, error) {
+func (_self *LightsparkSigner) SignInvoiceHash(unsignedInvoice []uint8) (*InvoiceSignature, *LightsparkSignerError) {
 	_pointer := _self.ffiObject.incrementPointer("*LightsparkSigner")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice_hash(
 			_pointer, FfiConverterSequenceUint8INSTANCE.Lower(unsignedInvoice), _uniffiStatus)
 	})
@@ -1228,7 +1297,6 @@ func (_self *LightsparkSigner) SignInvoiceHash(unsignedInvoice []uint8) (*Invoic
 		return FfiConverterInvoiceSignatureINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
-
 func (object *LightsparkSigner) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1242,9 +1310,13 @@ func (c FfiConverterLightsparkSigner) Lift(pointer unsafe.Pointer) *LightsparkSi
 	result := &LightsparkSigner{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_lightspark_crypto_fn_clone_lightsparksigner(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_lightspark_crypto_fn_free_lightsparksigner(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*LightsparkSigner).Destroy)
 	return result
@@ -1261,6 +1333,7 @@ func (c FfiConverterLightsparkSigner) Lower(value *LightsparkSigner) unsafe.Poin
 	pointer := value.ffiObject.incrementPointer("*LightsparkSigner")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterLightsparkSigner) Write(writer io.Writer, value *LightsparkSigner) {
@@ -1273,12 +1346,15 @@ func (_ FfiDestroyerLightsparkSigner) Destroy(value *LightsparkSigner) {
 	value.Destroy()
 }
 
+type MnemonicInterface interface {
+	AsString() string
+}
 type Mnemonic struct {
 	ffiObject FfiObject
 }
 
-func MnemonicFromEntropy(entropy []uint8) (*Mnemonic, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+func MnemonicFromEntropy(entropy []uint8) (*Mnemonic, *LightsparkSignerError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_constructor_mnemonic_from_entropy(FfiConverterSequenceUint8INSTANCE.Lower(entropy), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
@@ -1289,8 +1365,8 @@ func MnemonicFromEntropy(entropy []uint8) (*Mnemonic, error) {
 	}
 }
 
-func MnemonicFromPhrase(phrase string) (*Mnemonic, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+func MnemonicFromPhrase(phrase string) (*Mnemonic, *LightsparkSignerError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_constructor_mnemonic_from_phrase(FfiConverterStringINSTANCE.Lower(phrase), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
@@ -1301,8 +1377,8 @@ func MnemonicFromPhrase(phrase string) (*Mnemonic, error) {
 	}
 }
 
-func MnemonicRandom() (*Mnemonic, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+func MnemonicRandom() (*Mnemonic, *LightsparkSignerError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[LightsparkSignerError](FfiConverterLightsparkSignerError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_constructor_mnemonic_random(_uniffiStatus)
 	})
 	if _uniffiErr != nil {
@@ -1317,11 +1393,12 @@ func (_self *Mnemonic) AsString() string {
 	_pointer := _self.ffiObject.incrementPointer("*Mnemonic")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterStringINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_mnemonic_as_string(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_mnemonic_as_string(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *Mnemonic) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1335,9 +1412,13 @@ func (c FfiConverterMnemonic) Lift(pointer unsafe.Pointer) *Mnemonic {
 	result := &Mnemonic{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_lightspark_crypto_fn_clone_mnemonic(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_lightspark_crypto_fn_free_mnemonic(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*Mnemonic).Destroy)
 	return result
@@ -1354,6 +1435,7 @@ func (c FfiConverterMnemonic) Lower(value *Mnemonic) unsafe.Pointer {
 	pointer := value.ffiObject.incrementPointer("*Mnemonic")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterMnemonic) Write(writer io.Writer, value *Mnemonic) {
@@ -1366,6 +1448,9 @@ func (_ FfiDestroyerMnemonic) Destroy(value *Mnemonic) {
 	value.Destroy()
 }
 
+type SeedInterface interface {
+	AsBytes() []uint8
+}
 type Seed struct {
 	ffiObject FfiObject
 }
@@ -1386,11 +1471,12 @@ func (_self *Seed) AsBytes() []uint8 {
 	_pointer := _self.ffiObject.incrementPointer("*Seed")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterSequenceUint8INSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_method_seed_as_bytes(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_method_seed_as_bytes(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *Seed) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1404,9 +1490,13 @@ func (c FfiConverterSeed) Lift(pointer unsafe.Pointer) *Seed {
 	result := &Seed{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_lightspark_crypto_fn_clone_seed(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_lightspark_crypto_fn_free_seed(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*Seed).Destroy)
 	return result
@@ -1423,6 +1513,7 @@ func (c FfiConverterSeed) Lower(value *Seed) unsafe.Pointer {
 	pointer := value.ffiObject.incrementPointer("*Seed")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterSeed) Write(writer io.Writer, value *Seed) {
@@ -1445,33 +1536,33 @@ func (r *RemoteSigningResponse) Destroy() {
 	FfiDestroyerString{}.Destroy(r.Variables)
 }
 
-type FfiConverterTypeRemoteSigningResponse struct{}
+type FfiConverterRemoteSigningResponse struct{}
 
-var FfiConverterTypeRemoteSigningResponseINSTANCE = FfiConverterTypeRemoteSigningResponse{}
+var FfiConverterRemoteSigningResponseINSTANCE = FfiConverterRemoteSigningResponse{}
 
-func (c FfiConverterTypeRemoteSigningResponse) Lift(rb RustBufferI) RemoteSigningResponse {
+func (c FfiConverterRemoteSigningResponse) Lift(rb RustBufferI) RemoteSigningResponse {
 	return LiftFromRustBuffer[RemoteSigningResponse](c, rb)
 }
 
-func (c FfiConverterTypeRemoteSigningResponse) Read(reader io.Reader) RemoteSigningResponse {
+func (c FfiConverterRemoteSigningResponse) Read(reader io.Reader) RemoteSigningResponse {
 	return RemoteSigningResponse{
 		FfiConverterStringINSTANCE.Read(reader),
 		FfiConverterStringINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeRemoteSigningResponse) Lower(value RemoteSigningResponse) RustBuffer {
+func (c FfiConverterRemoteSigningResponse) Lower(value RemoteSigningResponse) C.RustBuffer {
 	return LowerIntoRustBuffer[RemoteSigningResponse](c, value)
 }
 
-func (c FfiConverterTypeRemoteSigningResponse) Write(writer io.Writer, value RemoteSigningResponse) {
+func (c FfiConverterRemoteSigningResponse) Write(writer io.Writer, value RemoteSigningResponse) {
 	FfiConverterStringINSTANCE.Write(writer, value.Query)
 	FfiConverterStringINSTANCE.Write(writer, value.Variables)
 }
 
-type FfiDestroyerTypeRemoteSigningResponse struct{}
+type FfiDestroyerRemoteSigningResponse struct{}
 
-func (_ FfiDestroyerTypeRemoteSigningResponse) Destroy(value RemoteSigningResponse) {
+func (_ FfiDestroyerRemoteSigningResponse) Destroy(value RemoteSigningResponse) {
 	value.Destroy()
 }
 
@@ -1488,50 +1579,50 @@ type Response struct {
 func (r *Response) Destroy() {
 	FfiDestroyerString{}.Destroy(r.CommitmentTx)
 	FfiDestroyerString{}.Destroy(r.SweepTx)
-	FfiDestroyerSequenceTypeStringTuple{}.Destroy(r.HtlcInboundTx)
-	FfiDestroyerSequenceTypeStringTuple{}.Destroy(r.HtlcOutboundTx)
+	FfiDestroyerSequenceStringTuple{}.Destroy(r.HtlcInboundTx)
+	FfiDestroyerSequenceStringTuple{}.Destroy(r.HtlcOutboundTx)
 	FfiDestroyerString{}.Destroy(r.CounterpartySweepTx)
 	FfiDestroyerSequenceString{}.Destroy(r.CounterpartyHtlcInboundTx)
 	FfiDestroyerSequenceString{}.Destroy(r.CounterpartyHtlcOutboundTx)
 }
 
-type FfiConverterTypeResponse struct{}
+type FfiConverterResponse struct{}
 
-var FfiConverterTypeResponseINSTANCE = FfiConverterTypeResponse{}
+var FfiConverterResponseINSTANCE = FfiConverterResponse{}
 
-func (c FfiConverterTypeResponse) Lift(rb RustBufferI) Response {
+func (c FfiConverterResponse) Lift(rb RustBufferI) Response {
 	return LiftFromRustBuffer[Response](c, rb)
 }
 
-func (c FfiConverterTypeResponse) Read(reader io.Reader) Response {
+func (c FfiConverterResponse) Read(reader io.Reader) Response {
 	return Response{
 		FfiConverterStringINSTANCE.Read(reader),
 		FfiConverterStringINSTANCE.Read(reader),
-		FfiConverterSequenceTypeStringTupleINSTANCE.Read(reader),
-		FfiConverterSequenceTypeStringTupleINSTANCE.Read(reader),
+		FfiConverterSequenceStringTupleINSTANCE.Read(reader),
+		FfiConverterSequenceStringTupleINSTANCE.Read(reader),
 		FfiConverterStringINSTANCE.Read(reader),
 		FfiConverterSequenceStringINSTANCE.Read(reader),
 		FfiConverterSequenceStringINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeResponse) Lower(value Response) RustBuffer {
+func (c FfiConverterResponse) Lower(value Response) C.RustBuffer {
 	return LowerIntoRustBuffer[Response](c, value)
 }
 
-func (c FfiConverterTypeResponse) Write(writer io.Writer, value Response) {
+func (c FfiConverterResponse) Write(writer io.Writer, value Response) {
 	FfiConverterStringINSTANCE.Write(writer, value.CommitmentTx)
 	FfiConverterStringINSTANCE.Write(writer, value.SweepTx)
-	FfiConverterSequenceTypeStringTupleINSTANCE.Write(writer, value.HtlcInboundTx)
-	FfiConverterSequenceTypeStringTupleINSTANCE.Write(writer, value.HtlcOutboundTx)
+	FfiConverterSequenceStringTupleINSTANCE.Write(writer, value.HtlcInboundTx)
+	FfiConverterSequenceStringTupleINSTANCE.Write(writer, value.HtlcOutboundTx)
 	FfiConverterStringINSTANCE.Write(writer, value.CounterpartySweepTx)
 	FfiConverterSequenceStringINSTANCE.Write(writer, value.CounterpartyHtlcInboundTx)
 	FfiConverterSequenceStringINSTANCE.Write(writer, value.CounterpartyHtlcOutboundTx)
 }
 
-type FfiDestroyerTypeResponse struct{}
+type FfiDestroyerResponse struct{}
 
-func (_ FfiDestroyerTypeResponse) Destroy(value Response) {
+func (_ FfiDestroyerResponse) Destroy(value Response) {
 	value.Destroy()
 }
 
@@ -1545,38 +1636,48 @@ func (r *StringTuple) Destroy() {
 	FfiDestroyerString{}.Destroy(r.Second)
 }
 
-type FfiConverterTypeStringTuple struct{}
+type FfiConverterStringTuple struct{}
 
-var FfiConverterTypeStringTupleINSTANCE = FfiConverterTypeStringTuple{}
+var FfiConverterStringTupleINSTANCE = FfiConverterStringTuple{}
 
-func (c FfiConverterTypeStringTuple) Lift(rb RustBufferI) StringTuple {
+func (c FfiConverterStringTuple) Lift(rb RustBufferI) StringTuple {
 	return LiftFromRustBuffer[StringTuple](c, rb)
 }
 
-func (c FfiConverterTypeStringTuple) Read(reader io.Reader) StringTuple {
+func (c FfiConverterStringTuple) Read(reader io.Reader) StringTuple {
 	return StringTuple{
 		FfiConverterStringINSTANCE.Read(reader),
 		FfiConverterStringINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeStringTuple) Lower(value StringTuple) RustBuffer {
+func (c FfiConverterStringTuple) Lower(value StringTuple) C.RustBuffer {
 	return LowerIntoRustBuffer[StringTuple](c, value)
 }
 
-func (c FfiConverterTypeStringTuple) Write(writer io.Writer, value StringTuple) {
+func (c FfiConverterStringTuple) Write(writer io.Writer, value StringTuple) {
 	FfiConverterStringINSTANCE.Write(writer, value.First)
 	FfiConverterStringINSTANCE.Write(writer, value.Second)
 }
 
-type FfiDestroyerTypeStringTuple struct{}
+type FfiDestroyerStringTuple struct{}
 
-func (_ FfiDestroyerTypeStringTuple) Destroy(value StringTuple) {
+func (_ FfiDestroyerStringTuple) Destroy(value StringTuple) {
 	value.Destroy()
 }
 
 type CryptoError struct {
 	err error
+}
+
+// Convience method to turn *CryptoError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *CryptoError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err CryptoError) Error() string {
@@ -1600,9 +1701,10 @@ type CryptoErrorSecp256k1Error struct {
 }
 
 func NewCryptoErrorSecp256k1Error() *CryptoError {
-	return &CryptoError{
-		err: &CryptoErrorSecp256k1Error{},
-	}
+	return &CryptoError{err: &CryptoErrorSecp256k1Error{}}
+}
+
+func (e CryptoErrorSecp256k1Error) destroy() {
 }
 
 func (err CryptoErrorSecp256k1Error) Error() string {
@@ -1618,9 +1720,10 @@ type CryptoErrorRustSecp256k1Error struct {
 }
 
 func NewCryptoErrorRustSecp256k1Error() *CryptoError {
-	return &CryptoError{
-		err: &CryptoErrorRustSecp256k1Error{},
-	}
+	return &CryptoError{err: &CryptoErrorRustSecp256k1Error{}}
+}
+
+func (e CryptoErrorRustSecp256k1Error) destroy() {
 }
 
 func (err CryptoErrorRustSecp256k1Error) Error() string {
@@ -1636,9 +1739,10 @@ type CryptoErrorInvalidPublicKeyScriptError struct {
 }
 
 func NewCryptoErrorInvalidPublicKeyScriptError() *CryptoError {
-	return &CryptoError{
-		err: &CryptoErrorInvalidPublicKeyScriptError{},
-	}
+	return &CryptoError{err: &CryptoErrorInvalidPublicKeyScriptError{}}
+}
+
+func (e CryptoErrorInvalidPublicKeyScriptError) destroy() {
 }
 
 func (err CryptoErrorInvalidPublicKeyScriptError) Error() string {
@@ -1654,9 +1758,10 @@ type CryptoErrorKeyDerivationError struct {
 }
 
 func NewCryptoErrorKeyDerivationError() *CryptoError {
-	return &CryptoError{
-		err: &CryptoErrorKeyDerivationError{},
-	}
+	return &CryptoError{err: &CryptoErrorKeyDerivationError{}}
+}
+
+func (e CryptoErrorKeyDerivationError) destroy() {
 }
 
 func (err CryptoErrorKeyDerivationError) Error() string {
@@ -1672,9 +1777,10 @@ type CryptoErrorKeyTweakError struct {
 }
 
 func NewCryptoErrorKeyTweakError() *CryptoError {
-	return &CryptoError{
-		err: &CryptoErrorKeyTweakError{},
-	}
+	return &CryptoError{err: &CryptoErrorKeyTweakError{}}
+}
+
+func (e CryptoErrorKeyTweakError) destroy() {
 }
 
 func (err CryptoErrorKeyTweakError) Error() string {
@@ -1685,19 +1791,19 @@ func (self CryptoErrorKeyTweakError) Is(target error) bool {
 	return target == ErrCryptoErrorKeyTweakError
 }
 
-type FfiConverterTypeCryptoError struct{}
+type FfiConverterCryptoError struct{}
 
-var FfiConverterTypeCryptoErrorINSTANCE = FfiConverterTypeCryptoError{}
+var FfiConverterCryptoErrorINSTANCE = FfiConverterCryptoError{}
 
-func (c FfiConverterTypeCryptoError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterCryptoError) Lift(eb RustBufferI) *CryptoError {
+	return LiftFromRustBuffer[*CryptoError](c, eb)
 }
 
-func (c FfiConverterTypeCryptoError) Lower(value *CryptoError) RustBuffer {
+func (c FfiConverterCryptoError) Lower(value *CryptoError) C.RustBuffer {
 	return LowerIntoRustBuffer[*CryptoError](c, value)
 }
 
-func (c FfiConverterTypeCryptoError) Read(reader io.Reader) error {
+func (c FfiConverterCryptoError) Read(reader io.Reader) *CryptoError {
 	errorID := readUint32(reader)
 
 	message := FfiConverterStringINSTANCE.Read(reader)
@@ -1713,12 +1819,12 @@ func (c FfiConverterTypeCryptoError) Read(reader io.Reader) error {
 	case 5:
 		return &CryptoError{&CryptoErrorKeyTweakError{message}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeCryptoError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterCryptoError.Read()", errorID))
 	}
 
 }
 
-func (c FfiConverterTypeCryptoError) Write(writer io.Writer, value *CryptoError) {
+func (c FfiConverterCryptoError) Write(writer io.Writer, value *CryptoError) {
 	switch variantValue := value.err.(type) {
 	case *CryptoErrorSecp256k1Error:
 		writeInt32(writer, 1)
@@ -1732,12 +1838,42 @@ func (c FfiConverterTypeCryptoError) Write(writer io.Writer, value *CryptoError)
 		writeInt32(writer, 5)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCryptoError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterCryptoError.Write", value))
+	}
+}
+
+type FfiDestroyerCryptoError struct{}
+
+func (_ FfiDestroyerCryptoError) Destroy(value *CryptoError) {
+	switch variantValue := value.err.(type) {
+	case CryptoErrorSecp256k1Error:
+		variantValue.destroy()
+	case CryptoErrorRustSecp256k1Error:
+		variantValue.destroy()
+	case CryptoErrorInvalidPublicKeyScriptError:
+		variantValue.destroy()
+	case CryptoErrorKeyDerivationError:
+		variantValue.destroy()
+	case CryptoErrorKeyTweakError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerCryptoError.Destroy", value))
 	}
 }
 
 type FundsRecoveryKitError struct {
 	err error
+}
+
+// Convience method to turn *FundsRecoveryKitError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *FundsRecoveryKitError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err FundsRecoveryKitError) Error() string {
@@ -1759,11 +1895,12 @@ type FundsRecoveryKitErrorError struct {
 func NewFundsRecoveryKitErrorError(
 	message string,
 ) *FundsRecoveryKitError {
-	return &FundsRecoveryKitError{
-		err: &FundsRecoveryKitErrorError{
-			Message: message,
-		},
-	}
+	return &FundsRecoveryKitError{err: &FundsRecoveryKitErrorError{
+		Message: message}}
+}
+
+func (e FundsRecoveryKitErrorError) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err FundsRecoveryKitErrorError) Error() string {
@@ -1779,19 +1916,19 @@ func (self FundsRecoveryKitErrorError) Is(target error) bool {
 	return target == ErrFundsRecoveryKitErrorError
 }
 
-type FfiConverterTypeFundsRecoveryKitError struct{}
+type FfiConverterFundsRecoveryKitError struct{}
 
-var FfiConverterTypeFundsRecoveryKitErrorINSTANCE = FfiConverterTypeFundsRecoveryKitError{}
+var FfiConverterFundsRecoveryKitErrorINSTANCE = FfiConverterFundsRecoveryKitError{}
 
-func (c FfiConverterTypeFundsRecoveryKitError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterFundsRecoveryKitError) Lift(eb RustBufferI) *FundsRecoveryKitError {
+	return LiftFromRustBuffer[*FundsRecoveryKitError](c, eb)
 }
 
-func (c FfiConverterTypeFundsRecoveryKitError) Lower(value *FundsRecoveryKitError) RustBuffer {
+func (c FfiConverterFundsRecoveryKitError) Lower(value *FundsRecoveryKitError) C.RustBuffer {
 	return LowerIntoRustBuffer[*FundsRecoveryKitError](c, value)
 }
 
-func (c FfiConverterTypeFundsRecoveryKitError) Read(reader io.Reader) error {
+func (c FfiConverterFundsRecoveryKitError) Read(reader io.Reader) *FundsRecoveryKitError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -1800,23 +1937,45 @@ func (c FfiConverterTypeFundsRecoveryKitError) Read(reader io.Reader) error {
 			Message: FfiConverterStringINSTANCE.Read(reader),
 		}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFundsRecoveryKitError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterFundsRecoveryKitError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeFundsRecoveryKitError) Write(writer io.Writer, value *FundsRecoveryKitError) {
+func (c FfiConverterFundsRecoveryKitError) Write(writer io.Writer, value *FundsRecoveryKitError) {
 	switch variantValue := value.err.(type) {
 	case *FundsRecoveryKitErrorError:
 		writeInt32(writer, 1)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFundsRecoveryKitError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterFundsRecoveryKitError.Write", value))
+	}
+}
+
+type FfiDestroyerFundsRecoveryKitError struct{}
+
+func (_ FfiDestroyerFundsRecoveryKitError) Destroy(value *FundsRecoveryKitError) {
+	switch variantValue := value.err.(type) {
+	case FundsRecoveryKitErrorError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerFundsRecoveryKitError.Destroy", value))
 	}
 }
 
 type LightsparkSignerError struct {
 	err error
+}
+
+// Convience method to turn *LightsparkSignerError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *LightsparkSignerError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err LightsparkSignerError) Error() string {
@@ -1840,9 +1999,10 @@ type LightsparkSignerErrorBip39Error struct {
 }
 
 func NewLightsparkSignerErrorBip39Error() *LightsparkSignerError {
-	return &LightsparkSignerError{
-		err: &LightsparkSignerErrorBip39Error{},
-	}
+	return &LightsparkSignerError{err: &LightsparkSignerErrorBip39Error{}}
+}
+
+func (e LightsparkSignerErrorBip39Error) destroy() {
 }
 
 func (err LightsparkSignerErrorBip39Error) Error() string {
@@ -1858,9 +2018,10 @@ type LightsparkSignerErrorSecp256k1Error struct {
 }
 
 func NewLightsparkSignerErrorSecp256k1Error() *LightsparkSignerError {
-	return &LightsparkSignerError{
-		err: &LightsparkSignerErrorSecp256k1Error{},
-	}
+	return &LightsparkSignerError{err: &LightsparkSignerErrorSecp256k1Error{}}
+}
+
+func (e LightsparkSignerErrorSecp256k1Error) destroy() {
 }
 
 func (err LightsparkSignerErrorSecp256k1Error) Error() string {
@@ -1876,9 +2037,10 @@ type LightsparkSignerErrorKeyDerivationError struct {
 }
 
 func NewLightsparkSignerErrorKeyDerivationError() *LightsparkSignerError {
-	return &LightsparkSignerError{
-		err: &LightsparkSignerErrorKeyDerivationError{},
-	}
+	return &LightsparkSignerError{err: &LightsparkSignerErrorKeyDerivationError{}}
+}
+
+func (e LightsparkSignerErrorKeyDerivationError) destroy() {
 }
 
 func (err LightsparkSignerErrorKeyDerivationError) Error() string {
@@ -1894,9 +2056,10 @@ type LightsparkSignerErrorKeyTweakError struct {
 }
 
 func NewLightsparkSignerErrorKeyTweakError() *LightsparkSignerError {
-	return &LightsparkSignerError{
-		err: &LightsparkSignerErrorKeyTweakError{},
-	}
+	return &LightsparkSignerError{err: &LightsparkSignerErrorKeyTweakError{}}
+}
+
+func (e LightsparkSignerErrorKeyTweakError) destroy() {
 }
 
 func (err LightsparkSignerErrorKeyTweakError) Error() string {
@@ -1912,9 +2075,10 @@ type LightsparkSignerErrorEntropyLengthError struct {
 }
 
 func NewLightsparkSignerErrorEntropyLengthError() *LightsparkSignerError {
-	return &LightsparkSignerError{
-		err: &LightsparkSignerErrorEntropyLengthError{},
-	}
+	return &LightsparkSignerError{err: &LightsparkSignerErrorEntropyLengthError{}}
+}
+
+func (e LightsparkSignerErrorEntropyLengthError) destroy() {
 }
 
 func (err LightsparkSignerErrorEntropyLengthError) Error() string {
@@ -1925,19 +2089,19 @@ func (self LightsparkSignerErrorEntropyLengthError) Is(target error) bool {
 	return target == ErrLightsparkSignerErrorEntropyLengthError
 }
 
-type FfiConverterTypeLightsparkSignerError struct{}
+type FfiConverterLightsparkSignerError struct{}
 
-var FfiConverterTypeLightsparkSignerErrorINSTANCE = FfiConverterTypeLightsparkSignerError{}
+var FfiConverterLightsparkSignerErrorINSTANCE = FfiConverterLightsparkSignerError{}
 
-func (c FfiConverterTypeLightsparkSignerError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterLightsparkSignerError) Lift(eb RustBufferI) *LightsparkSignerError {
+	return LiftFromRustBuffer[*LightsparkSignerError](c, eb)
 }
 
-func (c FfiConverterTypeLightsparkSignerError) Lower(value *LightsparkSignerError) RustBuffer {
+func (c FfiConverterLightsparkSignerError) Lower(value *LightsparkSignerError) C.RustBuffer {
 	return LowerIntoRustBuffer[*LightsparkSignerError](c, value)
 }
 
-func (c FfiConverterTypeLightsparkSignerError) Read(reader io.Reader) error {
+func (c FfiConverterLightsparkSignerError) Read(reader io.Reader) *LightsparkSignerError {
 	errorID := readUint32(reader)
 
 	message := FfiConverterStringINSTANCE.Read(reader)
@@ -1953,12 +2117,12 @@ func (c FfiConverterTypeLightsparkSignerError) Read(reader io.Reader) error {
 	case 5:
 		return &LightsparkSignerError{&LightsparkSignerErrorEntropyLengthError{message}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeLightsparkSignerError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterLightsparkSignerError.Read()", errorID))
 	}
 
 }
 
-func (c FfiConverterTypeLightsparkSignerError) Write(writer io.Writer, value *LightsparkSignerError) {
+func (c FfiConverterLightsparkSignerError) Write(writer io.Writer, value *LightsparkSignerError) {
 	switch variantValue := value.err.(type) {
 	case *LightsparkSignerErrorBip39Error:
 		writeInt32(writer, 1)
@@ -1972,7 +2136,27 @@ func (c FfiConverterTypeLightsparkSignerError) Write(writer io.Writer, value *Li
 		writeInt32(writer, 5)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeLightsparkSignerError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterLightsparkSignerError.Write", value))
+	}
+}
+
+type FfiDestroyerLightsparkSignerError struct{}
+
+func (_ FfiDestroyerLightsparkSignerError) Destroy(value *LightsparkSignerError) {
+	switch variantValue := value.err.(type) {
+	case LightsparkSignerErrorBip39Error:
+		variantValue.destroy()
+	case LightsparkSignerErrorSecp256k1Error:
+		variantValue.destroy()
+	case LightsparkSignerErrorKeyDerivationError:
+		variantValue.destroy()
+	case LightsparkSignerErrorKeyTweakError:
+		variantValue.destroy()
+	case LightsparkSignerErrorEntropyLengthError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerLightsparkSignerError.Destroy", value))
 	}
 }
 
@@ -1984,33 +2168,43 @@ const (
 	NetworkRegtest Network = 3
 )
 
-type FfiConverterTypeNetwork struct{}
+type FfiConverterNetwork struct{}
 
-var FfiConverterTypeNetworkINSTANCE = FfiConverterTypeNetwork{}
+var FfiConverterNetworkINSTANCE = FfiConverterNetwork{}
 
-func (c FfiConverterTypeNetwork) Lift(rb RustBufferI) Network {
+func (c FfiConverterNetwork) Lift(rb RustBufferI) Network {
 	return LiftFromRustBuffer[Network](c, rb)
 }
 
-func (c FfiConverterTypeNetwork) Lower(value Network) RustBuffer {
+func (c FfiConverterNetwork) Lower(value Network) C.RustBuffer {
 	return LowerIntoRustBuffer[Network](c, value)
 }
-func (FfiConverterTypeNetwork) Read(reader io.Reader) Network {
+func (FfiConverterNetwork) Read(reader io.Reader) Network {
 	id := readInt32(reader)
 	return Network(id)
 }
 
-func (FfiConverterTypeNetwork) Write(writer io.Writer, value Network) {
+func (FfiConverterNetwork) Write(writer io.Writer, value Network) {
 	writeInt32(writer, int32(value))
 }
 
-type FfiDestroyerTypeNetwork struct{}
+type FfiDestroyerNetwork struct{}
 
-func (_ FfiDestroyerTypeNetwork) Destroy(value Network) {
+func (_ FfiDestroyerNetwork) Destroy(value Network) {
 }
 
 type RemoteSigningError struct {
 	err error
+}
+
+// Convience method to turn *RemoteSigningError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *RemoteSigningError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err RemoteSigningError) Error() string {
@@ -2033,9 +2227,10 @@ type RemoteSigningErrorWebhookParsingError struct {
 }
 
 func NewRemoteSigningErrorWebhookParsingError() *RemoteSigningError {
-	return &RemoteSigningError{
-		err: &RemoteSigningErrorWebhookParsingError{},
-	}
+	return &RemoteSigningError{err: &RemoteSigningErrorWebhookParsingError{}}
+}
+
+func (e RemoteSigningErrorWebhookParsingError) destroy() {
 }
 
 func (err RemoteSigningErrorWebhookParsingError) Error() string {
@@ -2051,9 +2246,10 @@ type RemoteSigningErrorWebhookSignatureError struct {
 }
 
 func NewRemoteSigningErrorWebhookSignatureError() *RemoteSigningError {
-	return &RemoteSigningError{
-		err: &RemoteSigningErrorWebhookSignatureError{},
-	}
+	return &RemoteSigningError{err: &RemoteSigningErrorWebhookSignatureError{}}
+}
+
+func (e RemoteSigningErrorWebhookSignatureError) destroy() {
 }
 
 func (err RemoteSigningErrorWebhookSignatureError) Error() string {
@@ -2069,9 +2265,10 @@ type RemoteSigningErrorSignerCreationError struct {
 }
 
 func NewRemoteSigningErrorSignerCreationError() *RemoteSigningError {
-	return &RemoteSigningError{
-		err: &RemoteSigningErrorSignerCreationError{},
-	}
+	return &RemoteSigningError{err: &RemoteSigningErrorSignerCreationError{}}
+}
+
+func (e RemoteSigningErrorSignerCreationError) destroy() {
 }
 
 func (err RemoteSigningErrorSignerCreationError) Error() string {
@@ -2087,9 +2284,10 @@ type RemoteSigningErrorRemoteSigningHandlerError struct {
 }
 
 func NewRemoteSigningErrorRemoteSigningHandlerError() *RemoteSigningError {
-	return &RemoteSigningError{
-		err: &RemoteSigningErrorRemoteSigningHandlerError{},
-	}
+	return &RemoteSigningError{err: &RemoteSigningErrorRemoteSigningHandlerError{}}
+}
+
+func (e RemoteSigningErrorRemoteSigningHandlerError) destroy() {
 }
 
 func (err RemoteSigningErrorRemoteSigningHandlerError) Error() string {
@@ -2100,19 +2298,19 @@ func (self RemoteSigningErrorRemoteSigningHandlerError) Is(target error) bool {
 	return target == ErrRemoteSigningErrorRemoteSigningHandlerError
 }
 
-type FfiConverterTypeRemoteSigningError struct{}
+type FfiConverterRemoteSigningError struct{}
 
-var FfiConverterTypeRemoteSigningErrorINSTANCE = FfiConverterTypeRemoteSigningError{}
+var FfiConverterRemoteSigningErrorINSTANCE = FfiConverterRemoteSigningError{}
 
-func (c FfiConverterTypeRemoteSigningError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterRemoteSigningError) Lift(eb RustBufferI) *RemoteSigningError {
+	return LiftFromRustBuffer[*RemoteSigningError](c, eb)
 }
 
-func (c FfiConverterTypeRemoteSigningError) Lower(value *RemoteSigningError) RustBuffer {
+func (c FfiConverterRemoteSigningError) Lower(value *RemoteSigningError) C.RustBuffer {
 	return LowerIntoRustBuffer[*RemoteSigningError](c, value)
 }
 
-func (c FfiConverterTypeRemoteSigningError) Read(reader io.Reader) error {
+func (c FfiConverterRemoteSigningError) Read(reader io.Reader) *RemoteSigningError {
 	errorID := readUint32(reader)
 
 	message := FfiConverterStringINSTANCE.Read(reader)
@@ -2126,12 +2324,12 @@ func (c FfiConverterTypeRemoteSigningError) Read(reader io.Reader) error {
 	case 4:
 		return &RemoteSigningError{&RemoteSigningErrorRemoteSigningHandlerError{message}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeRemoteSigningError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterRemoteSigningError.Read()", errorID))
 	}
 
 }
 
-func (c FfiConverterTypeRemoteSigningError) Write(writer io.Writer, value *RemoteSigningError) {
+func (c FfiConverterRemoteSigningError) Write(writer io.Writer, value *RemoteSigningError) {
 	switch variantValue := value.err.(type) {
 	case *RemoteSigningErrorWebhookParsingError:
 		writeInt32(writer, 1)
@@ -2143,11 +2341,65 @@ func (c FfiConverterTypeRemoteSigningError) Write(writer io.Writer, value *Remot
 		writeInt32(writer, 4)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeRemoteSigningError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterRemoteSigningError.Write", value))
 	}
 }
 
-type uniffiCallbackResult C.int32_t
+type FfiDestroyerRemoteSigningError struct{}
+
+func (_ FfiDestroyerRemoteSigningError) Destroy(value *RemoteSigningError) {
+	switch variantValue := value.err.(type) {
+	case RemoteSigningErrorWebhookParsingError:
+		variantValue.destroy()
+	case RemoteSigningErrorWebhookSignatureError:
+		variantValue.destroy()
+	case RemoteSigningErrorSignerCreationError:
+		variantValue.destroy()
+	case RemoteSigningErrorRemoteSigningHandlerError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerRemoteSigningError.Destroy", value))
+	}
+}
+
+type Validation interface {
+	ShouldSign(webhook string) bool
+}
+
+type FfiConverterCallbackInterfaceValidation struct {
+	handleMap *concurrentHandleMap[Validation]
+}
+
+var FfiConverterCallbackInterfaceValidationINSTANCE = FfiConverterCallbackInterfaceValidation{
+	handleMap: newConcurrentHandleMap[Validation](),
+}
+
+func (c FfiConverterCallbackInterfaceValidation) Lift(handle uint64) Validation {
+	val, ok := c.handleMap.tryGet(handle)
+	if !ok {
+		panic(fmt.Errorf("no callback in handle map: %d", handle))
+	}
+	return val
+}
+
+func (c FfiConverterCallbackInterfaceValidation) Read(reader io.Reader) Validation {
+	return c.Lift(readUint64(reader))
+}
+
+func (c FfiConverterCallbackInterfaceValidation) Lower(value Validation) C.uint64_t {
+	return C.uint64_t(c.handleMap.insert(value))
+}
+
+func (c FfiConverterCallbackInterfaceValidation) Write(writer io.Writer, value Validation) {
+	writeUint64(writer, uint64(c.Lower(value)))
+}
+
+type FfiDestroyerCallbackInterfaceValidation struct{}
+
+func (FfiDestroyerCallbackInterfaceValidation) Destroy(value Validation) {}
+
+type uniffiCallbackResult C.int8_t
 
 const (
 	uniffiIdxCallbackFree               uniffiCallbackResult = 0
@@ -2158,177 +2410,108 @@ const (
 )
 
 type concurrentHandleMap[T any] struct {
-	leftMap       map[uint64]*T
-	rightMap      map[*T]uint64
+	handles       map[uint64]T
 	currentHandle uint64
 	lock          sync.RWMutex
 }
 
 func newConcurrentHandleMap[T any]() *concurrentHandleMap[T] {
 	return &concurrentHandleMap[T]{
-		leftMap:  map[uint64]*T{},
-		rightMap: map[*T]uint64{},
+		handles: map[uint64]T{},
 	}
 }
 
-func (cm *concurrentHandleMap[T]) insert(obj *T) uint64 {
+func (cm *concurrentHandleMap[T]) insert(obj T) uint64 {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
-	if existingHandle, ok := cm.rightMap[obj]; ok {
-		return existingHandle
-	}
 	cm.currentHandle = cm.currentHandle + 1
-	cm.leftMap[cm.currentHandle] = obj
-	cm.rightMap[obj] = cm.currentHandle
+	cm.handles[cm.currentHandle] = obj
 	return cm.currentHandle
 }
 
-func (cm *concurrentHandleMap[T]) remove(handle uint64) bool {
+func (cm *concurrentHandleMap[T]) remove(handle uint64) {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
-	if val, ok := cm.leftMap[handle]; ok {
-		delete(cm.leftMap, handle)
-		delete(cm.rightMap, val)
-	}
-	return false
+	delete(cm.handles, handle)
 }
 
-func (cm *concurrentHandleMap[T]) tryGet(handle uint64) (*T, bool) {
+func (cm *concurrentHandleMap[T]) tryGet(handle uint64) (T, bool) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 
-	val, ok := cm.leftMap[handle]
+	val, ok := cm.handles[handle]
 	return val, ok
 }
 
-type FfiConverterCallbackInterface[CallbackInterface any] struct {
-	handleMap *concurrentHandleMap[CallbackInterface]
-}
-
-func (c *FfiConverterCallbackInterface[CallbackInterface]) drop(handle uint64) RustBuffer {
-	c.handleMap.remove(handle)
-	return RustBuffer{}
-}
-
-func (c *FfiConverterCallbackInterface[CallbackInterface]) Lift(handle uint64) CallbackInterface {
-	val, ok := c.handleMap.tryGet(handle)
+//export lightspark_crypto_cgo_dispatchCallbackInterfaceValidationMethod0
+func lightspark_crypto_cgo_dispatchCallbackInterfaceValidationMethod0(uniffiHandle C.uint64_t, webhook C.RustBuffer, uniffiOutReturn *C.int8_t, callStatus *C.RustCallStatus) {
+	handle := uint64(uniffiHandle)
+	uniffiObj, ok := FfiConverterCallbackInterfaceValidationINSTANCE.handleMap.tryGet(handle)
 	if !ok {
 		panic(fmt.Errorf("no callback in handle map: %d", handle))
 	}
-	return *val
+
+	res :=
+		uniffiObj.ShouldSign(
+			FfiConverterStringINSTANCE.Lift(GoRustBuffer{
+				inner: webhook,
+			}),
+		)
+
+	*uniffiOutReturn = FfiConverterBoolINSTANCE.Lower(res)
 }
 
-func (c *FfiConverterCallbackInterface[CallbackInterface]) Read(reader io.Reader) CallbackInterface {
-	return c.Lift(readUint64(reader))
+var UniffiVTableCallbackInterfaceValidationINSTANCE = C.UniffiVTableCallbackInterfaceValidation{
+	shouldSign: (C.UniffiCallbackInterfaceValidationMethod0)(C.lightspark_crypto_cgo_dispatchCallbackInterfaceValidationMethod0),
+
+	uniffiFree: (C.UniffiCallbackInterfaceFree)(C.lightspark_crypto_cgo_dispatchCallbackInterfaceValidationFree),
 }
 
-func (c *FfiConverterCallbackInterface[CallbackInterface]) Lower(value CallbackInterface) C.uint64_t {
-	return C.uint64_t(c.handleMap.insert(&value))
+//export lightspark_crypto_cgo_dispatchCallbackInterfaceValidationFree
+func lightspark_crypto_cgo_dispatchCallbackInterfaceValidationFree(handle C.uint64_t) {
+	FfiConverterCallbackInterfaceValidationINSTANCE.handleMap.remove(uint64(handle))
 }
 
-func (c *FfiConverterCallbackInterface[CallbackInterface]) Write(writer io.Writer, value CallbackInterface) {
-	writeUint64(writer, uint64(c.Lower(value)))
+func (c FfiConverterCallbackInterfaceValidation) register() {
+	C.uniffi_lightspark_crypto_fn_init_callback_vtable_validation(&UniffiVTableCallbackInterfaceValidationINSTANCE)
 }
 
-type Validation interface {
-	ShouldSign(webhook string) bool
-}
+type FfiConverterOptionalRemoteSigningResponse struct{}
 
-// foreignCallbackCallbackInterfaceValidation cannot be callable be a compiled function at a same time
-type foreignCallbackCallbackInterfaceValidation struct{}
+var FfiConverterOptionalRemoteSigningResponseINSTANCE = FfiConverterOptionalRemoteSigningResponse{}
 
-//export lightspark_crypto_cgo_Validation
-func lightspark_crypto_cgo_Validation(handle C.uint64_t, method C.int32_t, argsPtr *C.uint8_t, argsLen C.int32_t, outBuf *C.RustBuffer) C.int32_t {
-	cb := FfiConverterCallbackInterfaceValidationINSTANCE.Lift(uint64(handle))
-	switch method {
-	case 0:
-		// 0 means Rust is done with the callback, and the callback
-		// can be dropped by the foreign language.
-		*outBuf = FfiConverterCallbackInterfaceValidationINSTANCE.drop(uint64(handle))
-		// See docs of ForeignCallback in `uniffi/src/ffi/foreigncallbacks.rs`
-		return C.int32_t(uniffiIdxCallbackFree)
-
-	case 1:
-		var result uniffiCallbackResult
-		args := unsafe.Slice((*byte)(argsPtr), argsLen)
-		result = foreignCallbackCallbackInterfaceValidation{}.InvokeShouldSign(cb, args, outBuf)
-		return C.int32_t(result)
-
-	default:
-		// This should never happen, because an out of bounds method index won't
-		// ever be used. Once we can catch errors, we should return an InternalException.
-		// https://github.com/mozilla/uniffi-rs/issues/351
-		return C.int32_t(uniffiCallbackUnexpectedResultError)
-	}
-}
-
-func (foreignCallbackCallbackInterfaceValidation) InvokeShouldSign(callback Validation, args []byte, outBuf *C.RustBuffer) uniffiCallbackResult {
-	reader := bytes.NewReader(args)
-	result := callback.ShouldSign(FfiConverterStringINSTANCE.Read(reader))
-
-	*outBuf = LowerIntoRustBuffer[bool](FfiConverterBoolINSTANCE, result)
-	return uniffiCallbackResultSuccess
-}
-
-type FfiConverterCallbackInterfaceValidation struct {
-	FfiConverterCallbackInterface[Validation]
-}
-
-var FfiConverterCallbackInterfaceValidationINSTANCE = &FfiConverterCallbackInterfaceValidation{
-	FfiConverterCallbackInterface: FfiConverterCallbackInterface[Validation]{
-		handleMap: newConcurrentHandleMap[Validation](),
-	},
-}
-
-// This is a static function because only 1 instance is supported for registering
-func (c *FfiConverterCallbackInterfaceValidation) register() {
-	rustCall(func(status *C.RustCallStatus) int32 {
-		C.uniffi_lightspark_crypto_fn_init_callback_validation(C.ForeignCallback(C.lightspark_crypto_cgo_Validation), status)
-		return 0
-	})
-}
-
-type FfiDestroyerCallbackInterfaceValidation struct{}
-
-func (FfiDestroyerCallbackInterfaceValidation) Destroy(value Validation) {
-}
-
-type FfiConverterOptionalTypeRemoteSigningResponse struct{}
-
-var FfiConverterOptionalTypeRemoteSigningResponseINSTANCE = FfiConverterOptionalTypeRemoteSigningResponse{}
-
-func (c FfiConverterOptionalTypeRemoteSigningResponse) Lift(rb RustBufferI) *RemoteSigningResponse {
+func (c FfiConverterOptionalRemoteSigningResponse) Lift(rb RustBufferI) *RemoteSigningResponse {
 	return LiftFromRustBuffer[*RemoteSigningResponse](c, rb)
 }
 
-func (_ FfiConverterOptionalTypeRemoteSigningResponse) Read(reader io.Reader) *RemoteSigningResponse {
+func (_ FfiConverterOptionalRemoteSigningResponse) Read(reader io.Reader) *RemoteSigningResponse {
 	if readInt8(reader) == 0 {
 		return nil
 	}
-	temp := FfiConverterTypeRemoteSigningResponseINSTANCE.Read(reader)
+	temp := FfiConverterRemoteSigningResponseINSTANCE.Read(reader)
 	return &temp
 }
 
-func (c FfiConverterOptionalTypeRemoteSigningResponse) Lower(value *RemoteSigningResponse) RustBuffer {
+func (c FfiConverterOptionalRemoteSigningResponse) Lower(value *RemoteSigningResponse) C.RustBuffer {
 	return LowerIntoRustBuffer[*RemoteSigningResponse](c, value)
 }
 
-func (_ FfiConverterOptionalTypeRemoteSigningResponse) Write(writer io.Writer, value *RemoteSigningResponse) {
+func (_ FfiConverterOptionalRemoteSigningResponse) Write(writer io.Writer, value *RemoteSigningResponse) {
 	if value == nil {
 		writeInt8(writer, 0)
 	} else {
 		writeInt8(writer, 1)
-		FfiConverterTypeRemoteSigningResponseINSTANCE.Write(writer, *value)
+		FfiConverterRemoteSigningResponseINSTANCE.Write(writer, *value)
 	}
 }
 
-type FfiDestroyerOptionalTypeRemoteSigningResponse struct{}
+type FfiDestroyerOptionalRemoteSigningResponse struct{}
 
-func (_ FfiDestroyerOptionalTypeRemoteSigningResponse) Destroy(value *RemoteSigningResponse) {
+func (_ FfiDestroyerOptionalRemoteSigningResponse) Destroy(value *RemoteSigningResponse) {
 	if value != nil {
-		FfiDestroyerTypeRemoteSigningResponse{}.Destroy(*value)
+		FfiDestroyerRemoteSigningResponse{}.Destroy(*value)
 	}
 }
 
@@ -2348,7 +2531,7 @@ func (_ FfiConverterOptionalSequenceUint8) Read(reader io.Reader) *[]uint8 {
 	return &temp
 }
 
-func (c FfiConverterOptionalSequenceUint8) Lower(value *[]uint8) RustBuffer {
+func (c FfiConverterOptionalSequenceUint8) Lower(value *[]uint8) C.RustBuffer {
 	return LowerIntoRustBuffer[*[]uint8](c, value)
 }
 
@@ -2389,7 +2572,7 @@ func (c FfiConverterSequenceUint8) Read(reader io.Reader) []uint8 {
 	return result
 }
 
-func (c FfiConverterSequenceUint8) Lower(value []uint8) RustBuffer {
+func (c FfiConverterSequenceUint8) Lower(value []uint8) C.RustBuffer {
 	return LowerIntoRustBuffer[[]uint8](c, value)
 }
 
@@ -2432,7 +2615,7 @@ func (c FfiConverterSequenceString) Read(reader io.Reader) []string {
 	return result
 }
 
-func (c FfiConverterSequenceString) Lower(value []string) RustBuffer {
+func (c FfiConverterSequenceString) Lower(value []string) C.RustBuffer {
 	return LowerIntoRustBuffer[[]string](c, value)
 }
 
@@ -2455,52 +2638,54 @@ func (FfiDestroyerSequenceString) Destroy(sequence []string) {
 	}
 }
 
-type FfiConverterSequenceTypeStringTuple struct{}
+type FfiConverterSequenceStringTuple struct{}
 
-var FfiConverterSequenceTypeStringTupleINSTANCE = FfiConverterSequenceTypeStringTuple{}
+var FfiConverterSequenceStringTupleINSTANCE = FfiConverterSequenceStringTuple{}
 
-func (c FfiConverterSequenceTypeStringTuple) Lift(rb RustBufferI) []StringTuple {
+func (c FfiConverterSequenceStringTuple) Lift(rb RustBufferI) []StringTuple {
 	return LiftFromRustBuffer[[]StringTuple](c, rb)
 }
 
-func (c FfiConverterSequenceTypeStringTuple) Read(reader io.Reader) []StringTuple {
+func (c FfiConverterSequenceStringTuple) Read(reader io.Reader) []StringTuple {
 	length := readInt32(reader)
 	if length == 0 {
 		return nil
 	}
 	result := make([]StringTuple, 0, length)
 	for i := int32(0); i < length; i++ {
-		result = append(result, FfiConverterTypeStringTupleINSTANCE.Read(reader))
+		result = append(result, FfiConverterStringTupleINSTANCE.Read(reader))
 	}
 	return result
 }
 
-func (c FfiConverterSequenceTypeStringTuple) Lower(value []StringTuple) RustBuffer {
+func (c FfiConverterSequenceStringTuple) Lower(value []StringTuple) C.RustBuffer {
 	return LowerIntoRustBuffer[[]StringTuple](c, value)
 }
 
-func (c FfiConverterSequenceTypeStringTuple) Write(writer io.Writer, value []StringTuple) {
+func (c FfiConverterSequenceStringTuple) Write(writer io.Writer, value []StringTuple) {
 	if len(value) > math.MaxInt32 {
 		panic("[]StringTuple is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(value)))
 	for _, item := range value {
-		FfiConverterTypeStringTupleINSTANCE.Write(writer, item)
+		FfiConverterStringTupleINSTANCE.Write(writer, item)
 	}
 }
 
-type FfiDestroyerSequenceTypeStringTuple struct{}
+type FfiDestroyerSequenceStringTuple struct{}
 
-func (FfiDestroyerSequenceTypeStringTuple) Destroy(sequence []StringTuple) {
+func (FfiDestroyerSequenceStringTuple) Destroy(sequence []StringTuple) {
 	for _, value := range sequence {
-		FfiDestroyerTypeStringTuple{}.Destroy(value)
+		FfiDestroyerStringTuple{}.Destroy(value)
 	}
 }
 
-func DecryptEcies(cipherText []uint8, privateKeyBytes []uint8) ([]uint8, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_decrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(cipherText), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus)
+func DecryptEcies(cipherText []uint8, privateKeyBytes []uint8) ([]uint8, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_decrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(cipherText), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -2510,9 +2695,11 @@ func DecryptEcies(cipherText []uint8, privateKeyBytes []uint8) ([]uint8, error) 
 	}
 }
 
-func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(FfiConverterStringINSTANCE.Lower(pubkey), FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterOptionalSequenceUint8INSTANCE.Lower(addTweak), FfiConverterOptionalSequenceUint8INSTANCE.Lower(mulTweak), _uniffiStatus)
+func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(FfiConverterStringINSTANCE.Lower(pubkey), FfiConverterStringINSTANCE.Lower(derivationPath), FfiConverterOptionalSequenceUint8INSTANCE.Lower(addTweak), FfiConverterOptionalSequenceUint8INSTANCE.Lower(mulTweak), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -2522,9 +2709,11 @@ func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint
 	}
 }
 
-func EncryptEcies(msg []uint8, publicKeyBytes []uint8) ([]uint8, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_encrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(msg), FfiConverterSequenceUint8INSTANCE.Lower(publicKeyBytes), _uniffiStatus)
+func EncryptEcies(msg []uint8, publicKeyBytes []uint8) ([]uint8, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_encrypt_ecies(FfiConverterSequenceUint8INSTANCE.Lower(msg), FfiConverterSequenceUint8INSTANCE.Lower(publicKeyBytes), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -2534,8 +2723,8 @@ func EncryptEcies(msg []uint8, publicKeyBytes []uint8) ([]uint8, error) {
 	}
 }
 
-func GenerateKeypair() (*KeyPair, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+func GenerateKeypair() (*KeyPair, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_lightspark_crypto_fn_func_generate_keypair(_uniffiStatus)
 	})
 	if _uniffiErr != nil {
@@ -2546,9 +2735,11 @@ func GenerateKeypair() (*KeyPair, error) {
 	}
 }
 
-func GenerateMultisigAddress(network Network, pk1 []uint8, pk2 []uint8) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_generate_multisig_address(FfiConverterTypeNetworkINSTANCE.Lower(network), FfiConverterSequenceUint8INSTANCE.Lower(pk1), FfiConverterSequenceUint8INSTANCE.Lower(pk2), _uniffiStatus)
+func GenerateMultisigAddress(network Network, pk1 []uint8, pk2 []uint8) (string, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_generate_multisig_address(FfiConverterNetworkINSTANCE.Lower(network), FfiConverterSequenceUint8INSTANCE.Lower(pk1), FfiConverterSequenceUint8INSTANCE.Lower(pk2), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
@@ -2558,21 +2749,25 @@ func GenerateMultisigAddress(network Network, pk1 []uint8, pk2 []uint8) (string,
 	}
 }
 
-func HandleRemoteSigningWebhookEvent(webhookData []uint8, webhookSignature string, webhookSecret string, masterSeedBytes []uint8, validation Validation) (*RemoteSigningResponse, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRemoteSigningError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_handle_remote_signing_webhook_event(FfiConverterSequenceUint8INSTANCE.Lower(webhookData), FfiConverterStringINSTANCE.Lower(webhookSignature), FfiConverterStringINSTANCE.Lower(webhookSecret), FfiConverterSequenceUint8INSTANCE.Lower(masterSeedBytes), FfiConverterCallbackInterfaceValidationINSTANCE.Lower(validation), _uniffiStatus)
+func HandleRemoteSigningWebhookEvent(webhookData []uint8, webhookSignature string, webhookSecret string, masterSeedBytes []uint8, validation Validation) (*RemoteSigningResponse, *RemoteSigningError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[RemoteSigningError](FfiConverterRemoteSigningError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_handle_remote_signing_webhook_event(FfiConverterSequenceUint8INSTANCE.Lower(webhookData), FfiConverterStringINSTANCE.Lower(webhookSignature), FfiConverterStringINSTANCE.Lower(webhookSecret), FfiConverterSequenceUint8INSTANCE.Lower(masterSeedBytes), FfiConverterCallbackInterfaceValidationINSTANCE.Lower(validation), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *RemoteSigningResponse
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOptionalTypeRemoteSigningResponseINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOptionalRemoteSigningResponseINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
-func SignEcdsa(msg []uint8, privateKeyBytes []uint8) ([]uint8, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_sign_ecdsa(FfiConverterSequenceUint8INSTANCE.Lower(msg), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus)
+func SignEcdsa(msg []uint8, privateKeyBytes []uint8) ([]uint8, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_sign_ecdsa(FfiConverterSequenceUint8INSTANCE.Lower(msg), FfiConverterSequenceUint8INSTANCE.Lower(privateKeyBytes), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue []uint8
@@ -2582,20 +2777,22 @@ func SignEcdsa(msg []uint8, privateKeyBytes []uint8) ([]uint8, error) {
 	}
 }
 
-func SignTransactions(masterSeed string, data string, network Network) (Response, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFundsRecoveryKitError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_lightspark_crypto_fn_func_sign_transactions(FfiConverterStringINSTANCE.Lower(masterSeed), FfiConverterStringINSTANCE.Lower(data), FfiConverterTypeNetworkINSTANCE.Lower(network), _uniffiStatus)
+func SignTransactions(masterSeed string, data string, network Network) (Response, *FundsRecoveryKitError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[FundsRecoveryKitError](FfiConverterFundsRecoveryKitError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_lightspark_crypto_fn_func_sign_transactions(FfiConverterStringINSTANCE.Lower(masterSeed), FfiConverterStringINSTANCE.Lower(data), FfiConverterNetworkINSTANCE.Lower(network), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue Response
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeResponseINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterResponseINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
-func VerifyEcdsa(msg []uint8, signatureBytes []uint8, publicKeyBytes []uint8) (bool, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCryptoError{}, func(_uniffiStatus *C.RustCallStatus) C.int8_t {
+func VerifyEcdsa(msg []uint8, signatureBytes []uint8, publicKeyBytes []uint8) (bool, *CryptoError) {
+	_uniffiRV, _uniffiErr := rustCallWithError[CryptoError](FfiConverterCryptoError{}, func(_uniffiStatus *C.RustCallStatus) C.int8_t {
 		return C.uniffi_lightspark_crypto_fn_func_verify_ecdsa(FfiConverterSequenceUint8INSTANCE.Lower(msg), FfiConverterSequenceUint8INSTANCE.Lower(signatureBytes), FfiConverterSequenceUint8INSTANCE.Lower(publicKeyBytes), _uniffiStatus)
 	})
 	if _uniffiErr != nil {

@@ -24,24 +24,10 @@
 // ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V6 in this file.           ⚠️
 
 typedef struct RustBuffer {
-	int32_t capacity;
-	int32_t len;
+	uint64_t capacity;
+	uint64_t len;
 	uint8_t *data;
 } RustBuffer;
-
-typedef int32_t (*ForeignCallback)(uint64_t, int32_t, uint8_t *, int32_t, RustBuffer *);
-
-// Task defined in Rust that Go executes
-typedef void (*RustTaskCallback)(const void *, int8_t);
-
-// Callback to execute Rust tasks using a Go routine
-//
-// Args:
-//   executor: ForeignExecutor lowered into a uint64_t value
-//   delay: Delay in MS
-//   task: RustTaskCallback to call
-//   task_data: data to pass the task callback
-typedef int8_t (*ForeignExecutorCallback)(uint64_t, uint32_t, RustTaskCallback, void *);
 
 typedef struct ForeignBytes {
 	int32_t len;
@@ -54,705 +40,1100 @@ typedef struct RustCallStatus {
 	RustBuffer errorBuf;
 } RustCallStatus;
 
-// Continuation callback for UniFFI Futures
-typedef void (*RustFutureContinuation)(void * , int8_t);
-
-// ⚠️ Attention: If you change this #else block (ending in `#endif // def UNIFFI_SHARED_H`) you *must* ⚠️
-// ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V6 in this file.           ⚠️
-#endif // def UNIFFI_SHARED_H
-
-// Needed because we can't execute the callback directly from go.
-void cgo_rust_task_callback_bridge_lightspark_crypto(RustTaskCallback, const void *, int8_t);
-
-int8_t uniffiForeignExecutorCallbacklightspark_crypto(uint64_t, uint32_t, RustTaskCallback, void*);
-
-void uniffiFutureContinuationCallbacklightspark_crypto(void*, int8_t);
-
-void uniffi_lightspark_crypto_fn_free_invoicesignature(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-int32_t uniffi_lightspark_crypto_fn_method_invoicesignature_get_recovery_id(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_invoicesignature_get_signature(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_lightspark_crypto_fn_free_keypair(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_keypair_get_private_key(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_keypair_get_public_key(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_lightspark_crypto_fn_free_lightsparksigner(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_lightsparksigner_from_bytes(
-	RustBuffer seed,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_lightsparksigner_new(
-	void* seed,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_key_and_sign(
-	void* ptr,
-	RustBuffer message,
-	RustBuffer derivation_path,
-	int8_t is_raw,
-	RustBuffer add_tweak,
-	RustBuffer mul_tweak,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_private_key(
-	void* ptr,
-	RustBuffer derivation_path,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key(
-	void* ptr,
-	RustBuffer derivation_path,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key_hex(
-	void* ptr,
-	RustBuffer derivation_path,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_ecdh(
-	void* ptr,
-	RustBuffer public_key,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage(
-	void* ptr,
-	RustBuffer nonce,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_hash(
-	void* ptr,
-	RustBuffer nonce,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_nonce(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_get_master_public_key(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_get_per_commitment_point(
-	void* ptr,
-	RustBuffer derivation_path,
-	uint64_t per_commitment_point_idx,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_release_per_commitment_secret(
-	void* ptr,
-	RustBuffer derivation_path,
-	uint64_t per_commitment_point_idx,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice(
-	void* ptr,
-	RustBuffer unsigned_invoice,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice_hash(
-	void* ptr,
-	RustBuffer unsigned_invoice,
-	RustCallStatus* out_status
-);
-
-void uniffi_lightspark_crypto_fn_free_mnemonic(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_mnemonic_from_entropy(
-	RustBuffer entropy,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_mnemonic_from_phrase(
-	RustBuffer phrase,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_mnemonic_random(
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_mnemonic_as_string(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_lightspark_crypto_fn_free_seed(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_seed_from_mnemonic(
-	void* mnemonic,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_constructor_seed_new(
-	RustBuffer seed,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_method_seed_as_bytes(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_lightspark_crypto_fn_init_callback_validation(
-	ForeignCallback callback_stub,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_decrypt_ecies(
-	RustBuffer cipher_text,
-	RustBuffer private_key_bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(
-	RustBuffer pubkey,
-	RustBuffer derivation_path,
-	RustBuffer add_tweak,
-	RustBuffer mul_tweak,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_encrypt_ecies(
-	RustBuffer msg,
-	RustBuffer public_key_bytes,
-	RustCallStatus* out_status
-);
-
-void* uniffi_lightspark_crypto_fn_func_generate_keypair(
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_generate_multisig_address(
-	RustBuffer network,
-	RustBuffer pk1,
-	RustBuffer pk2,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_handle_remote_signing_webhook_event(
-	RustBuffer webhook_data,
-	RustBuffer webhook_signature,
-	RustBuffer webhook_secret,
-	RustBuffer master_seed_bytes,
-	uint64_t validation,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_sign_ecdsa(
-	RustBuffer msg,
-	RustBuffer private_key_bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_lightspark_crypto_fn_func_sign_transactions(
-	RustBuffer master_seed,
-	RustBuffer data,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-int8_t uniffi_lightspark_crypto_fn_func_verify_ecdsa(
-	RustBuffer msg,
-	RustBuffer signature_bytes,
-	RustBuffer public_key_bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_lightspark_crypto_rustbuffer_alloc(
-	int32_t size,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_lightspark_crypto_rustbuffer_from_bytes(
-	ForeignBytes bytes,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rustbuffer_free(
-	RustBuffer buf,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_lightspark_crypto_rustbuffer_reserve(
-	RustBuffer buf,
-	int32_t additional,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_continuation_callback_set(
-	RustFutureContinuation callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_u8(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint8_t ffi_lightspark_crypto_rust_future_complete_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_i8(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int8_t ffi_lightspark_crypto_rust_future_complete_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_u16(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint16_t ffi_lightspark_crypto_rust_future_complete_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_i16(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int16_t ffi_lightspark_crypto_rust_future_complete_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_u32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint32_t ffi_lightspark_crypto_rust_future_complete_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_i32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int32_t ffi_lightspark_crypto_rust_future_complete_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_u64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint64_t ffi_lightspark_crypto_rust_future_complete_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_i64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int64_t ffi_lightspark_crypto_rust_future_complete_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_f32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-float ffi_lightspark_crypto_rust_future_complete_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_f64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-double ffi_lightspark_crypto_rust_future_complete_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_pointer(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void* ffi_lightspark_crypto_rust_future_complete_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_rust_buffer(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_lightspark_crypto_rust_future_complete_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_poll_void(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_cancel_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_free_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_lightspark_crypto_rust_future_complete_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_decrypt_ecies(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_encrypt_ecies(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_generate_keypair(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_generate_multisig_address(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_event(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_sign_ecdsa(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_sign_transactions(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_func_verify_ecdsa(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_invoicesignature_get_recovery_id(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_invoicesignature_get_signature(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_keypair_get_private_key(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_keypair_get_public_key(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_key_and_sign(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_private_key(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key_hex(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_ecdh(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_hash(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_nonce(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_master_public_key(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_per_commitment_point(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_release_per_commitment_secret(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice_hash(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_mnemonic_as_string(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_seed_as_bytes(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_from_bytes(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_new(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_entropy(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_phrase(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_random(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_seed_from_mnemonic(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_constructor_seed_new(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_lightspark_crypto_checksum_method_validation_should_sign(
-	RustCallStatus* out_status
-);
-
-uint32_t ffi_lightspark_crypto_uniffi_contract_version(
-	RustCallStatus* out_status
-);
-
-
-int32_t lightspark_crypto_cgo_Validation(uint64_t, int32_t, uint8_t *, int32_t, RustBuffer *);
-
+#endif // UNIFFI_SHARED_H
+
+
+#ifndef UNIFFI_FFIDEF_RUST_FUTURE_CONTINUATION_CALLBACK
+#define UNIFFI_FFIDEF_RUST_FUTURE_CONTINUATION_CALLBACK
+typedef void (*UniffiRustFutureContinuationCallback)(uint64_t data, int8_t poll_result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiRustFutureContinuationCallback(
+				UniffiRustFutureContinuationCallback cb, uint64_t data, int8_t poll_result)
+{
+	return cb(data, poll_result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_FREE
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_FREE
+typedef void (*UniffiForeignFutureFree)(uint64_t handle);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureFree(
+				UniffiForeignFutureFree cb, uint64_t handle)
+{
+	return cb(handle);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_FREE
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_FREE
+typedef void (*UniffiCallbackInterfaceFree)(uint64_t handle);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiCallbackInterfaceFree(
+				UniffiCallbackInterfaceFree cb, uint64_t handle)
+{
+	return cb(handle);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE
+typedef struct UniffiForeignFuture {
+    uint64_t handle;
+    UniffiForeignFutureFree free;
+} UniffiForeignFuture;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U8
+typedef struct UniffiForeignFutureStructU8 {
+    uint8_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU8;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U8
+typedef void (*UniffiForeignFutureCompleteU8)(uint64_t callback_data, UniffiForeignFutureStructU8 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU8(
+				UniffiForeignFutureCompleteU8 cb, uint64_t callback_data, UniffiForeignFutureStructU8 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I8
+typedef struct UniffiForeignFutureStructI8 {
+    int8_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI8;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I8
+typedef void (*UniffiForeignFutureCompleteI8)(uint64_t callback_data, UniffiForeignFutureStructI8 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI8(
+				UniffiForeignFutureCompleteI8 cb, uint64_t callback_data, UniffiForeignFutureStructI8 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U16
+typedef struct UniffiForeignFutureStructU16 {
+    uint16_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU16;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U16
+typedef void (*UniffiForeignFutureCompleteU16)(uint64_t callback_data, UniffiForeignFutureStructU16 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU16(
+				UniffiForeignFutureCompleteU16 cb, uint64_t callback_data, UniffiForeignFutureStructU16 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I16
+typedef struct UniffiForeignFutureStructI16 {
+    int16_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI16;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I16
+typedef void (*UniffiForeignFutureCompleteI16)(uint64_t callback_data, UniffiForeignFutureStructI16 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI16(
+				UniffiForeignFutureCompleteI16 cb, uint64_t callback_data, UniffiForeignFutureStructI16 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U32
+typedef struct UniffiForeignFutureStructU32 {
+    uint32_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U32
+typedef void (*UniffiForeignFutureCompleteU32)(uint64_t callback_data, UniffiForeignFutureStructU32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU32(
+				UniffiForeignFutureCompleteU32 cb, uint64_t callback_data, UniffiForeignFutureStructU32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I32
+typedef struct UniffiForeignFutureStructI32 {
+    int32_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I32
+typedef void (*UniffiForeignFutureCompleteI32)(uint64_t callback_data, UniffiForeignFutureStructI32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI32(
+				UniffiForeignFutureCompleteI32 cb, uint64_t callback_data, UniffiForeignFutureStructI32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U64
+typedef struct UniffiForeignFutureStructU64 {
+    uint64_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U64
+typedef void (*UniffiForeignFutureCompleteU64)(uint64_t callback_data, UniffiForeignFutureStructU64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU64(
+				UniffiForeignFutureCompleteU64 cb, uint64_t callback_data, UniffiForeignFutureStructU64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I64
+typedef struct UniffiForeignFutureStructI64 {
+    int64_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I64
+typedef void (*UniffiForeignFutureCompleteI64)(uint64_t callback_data, UniffiForeignFutureStructI64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI64(
+				UniffiForeignFutureCompleteI64 cb, uint64_t callback_data, UniffiForeignFutureStructI64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F32
+typedef struct UniffiForeignFutureStructF32 {
+    float returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructF32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F32
+typedef void (*UniffiForeignFutureCompleteF32)(uint64_t callback_data, UniffiForeignFutureStructF32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteF32(
+				UniffiForeignFutureCompleteF32 cb, uint64_t callback_data, UniffiForeignFutureStructF32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F64
+typedef struct UniffiForeignFutureStructF64 {
+    double returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructF64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F64
+typedef void (*UniffiForeignFutureCompleteF64)(uint64_t callback_data, UniffiForeignFutureStructF64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteF64(
+				UniffiForeignFutureCompleteF64 cb, uint64_t callback_data, UniffiForeignFutureStructF64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_POINTER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_POINTER
+typedef struct UniffiForeignFutureStructPointer {
+    void* returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructPointer;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_POINTER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_POINTER
+typedef void (*UniffiForeignFutureCompletePointer)(uint64_t callback_data, UniffiForeignFutureStructPointer result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompletePointer(
+				UniffiForeignFutureCompletePointer cb, uint64_t callback_data, UniffiForeignFutureStructPointer result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_RUST_BUFFER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_RUST_BUFFER
+typedef struct UniffiForeignFutureStructRustBuffer {
+    RustBuffer returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructRustBuffer;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_RUST_BUFFER
+typedef void (*UniffiForeignFutureCompleteRustBuffer)(uint64_t callback_data, UniffiForeignFutureStructRustBuffer result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteRustBuffer(
+				UniffiForeignFutureCompleteRustBuffer cb, uint64_t callback_data, UniffiForeignFutureStructRustBuffer result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_VOID
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_VOID
+typedef struct UniffiForeignFutureStructVoid {
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructVoid;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_VOID
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_VOID
+typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t callback_data, UniffiForeignFutureStructVoid result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteVoid(
+				UniffiForeignFutureCompleteVoid cb, uint64_t callback_data, UniffiForeignFutureStructVoid result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VALIDATION_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VALIDATION_METHOD0
+typedef void (*UniffiCallbackInterfaceValidationMethod0)(uint64_t uniffi_handle, RustBuffer webhook, int8_t* uniffi_out_return, RustCallStatus* callStatus );
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiCallbackInterfaceValidationMethod0(
+				UniffiCallbackInterfaceValidationMethod0 cb, uint64_t uniffi_handle, RustBuffer webhook, int8_t* uniffi_out_return, RustCallStatus* callStatus )
+{
+	return cb(uniffi_handle, webhook, uniffi_out_return, callStatus );
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VALIDATION
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VALIDATION
+typedef struct UniffiVTableCallbackInterfaceValidation {
+    UniffiCallbackInterfaceValidationMethod0 shouldSign;
+    UniffiCallbackInterfaceFree uniffiFree;
+} UniffiVTableCallbackInterfaceValidation;
+
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_INVOICESIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_INVOICESIGNATURE
+void* uniffi_lightspark_crypto_fn_clone_invoicesignature(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_INVOICESIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_INVOICESIGNATURE
+void uniffi_lightspark_crypto_fn_free_invoicesignature(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_INVOICESIGNATURE_GET_RECOVERY_ID
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_INVOICESIGNATURE_GET_RECOVERY_ID
+int32_t uniffi_lightspark_crypto_fn_method_invoicesignature_get_recovery_id(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_INVOICESIGNATURE_GET_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_INVOICESIGNATURE_GET_SIGNATURE
+RustBuffer uniffi_lightspark_crypto_fn_method_invoicesignature_get_signature(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_KEYPAIR
+void* uniffi_lightspark_crypto_fn_clone_keypair(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_KEYPAIR
+void uniffi_lightspark_crypto_fn_free_keypair(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_KEYPAIR_GET_PRIVATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_KEYPAIR_GET_PRIVATE_KEY
+RustBuffer uniffi_lightspark_crypto_fn_method_keypair_get_private_key(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_KEYPAIR_GET_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_KEYPAIR_GET_PUBLIC_KEY
+RustBuffer uniffi_lightspark_crypto_fn_method_keypair_get_public_key(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_LIGHTSPARKSIGNER
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_LIGHTSPARKSIGNER
+void* uniffi_lightspark_crypto_fn_clone_lightsparksigner(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_LIGHTSPARKSIGNER
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_LIGHTSPARKSIGNER
+void uniffi_lightspark_crypto_fn_free_lightsparksigner(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_LIGHTSPARKSIGNER_FROM_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_LIGHTSPARKSIGNER_FROM_BYTES
+void* uniffi_lightspark_crypto_fn_constructor_lightsparksigner_from_bytes(RustBuffer seed, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_LIGHTSPARKSIGNER_NEW
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_LIGHTSPARKSIGNER_NEW
+void* uniffi_lightspark_crypto_fn_constructor_lightsparksigner_new(void* seed, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_KEY_AND_SIGN
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_KEY_AND_SIGN
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_key_and_sign(void* ptr, RustBuffer message, RustBuffer derivation_path, int8_t is_raw, RustBuffer add_tweak, RustBuffer mul_tweak, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PRIVATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PRIVATE_KEY
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_private_key(void* ptr, RustBuffer derivation_path, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key(void* ptr, RustBuffer derivation_path, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY_HEX
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY_HEX
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_derive_public_key_hex(void* ptr, RustBuffer derivation_path, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_ECDH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_ECDH
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_ecdh(void* ptr, RustBuffer public_key, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage(void* ptr, RustBuffer nonce, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_HASH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_HASH
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_hash(void* ptr, RustBuffer nonce, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_NONCE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_NONCE
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_generate_preimage_nonce(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GET_MASTER_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GET_MASTER_PUBLIC_KEY
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_get_master_public_key(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GET_PER_COMMITMENT_POINT
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_GET_PER_COMMITMENT_POINT
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_get_per_commitment_point(void* ptr, RustBuffer derivation_path, uint64_t per_commitment_point_idx, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_RELEASE_PER_COMMITMENT_SECRET
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_RELEASE_PER_COMMITMENT_SECRET
+RustBuffer uniffi_lightspark_crypto_fn_method_lightsparksigner_release_per_commitment_secret(void* ptr, RustBuffer derivation_path, uint64_t per_commitment_point_idx, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE
+void* uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice(void* ptr, RustBuffer unsigned_invoice, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE_HASH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE_HASH
+void* uniffi_lightspark_crypto_fn_method_lightsparksigner_sign_invoice_hash(void* ptr, RustBuffer unsigned_invoice, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_MNEMONIC
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_MNEMONIC
+void* uniffi_lightspark_crypto_fn_clone_mnemonic(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_MNEMONIC
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_MNEMONIC
+void uniffi_lightspark_crypto_fn_free_mnemonic(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_FROM_ENTROPY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_FROM_ENTROPY
+void* uniffi_lightspark_crypto_fn_constructor_mnemonic_from_entropy(RustBuffer entropy, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_FROM_PHRASE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_FROM_PHRASE
+void* uniffi_lightspark_crypto_fn_constructor_mnemonic_from_phrase(RustBuffer phrase, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_RANDOM
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_MNEMONIC_RANDOM
+void* uniffi_lightspark_crypto_fn_constructor_mnemonic_random(RustCallStatus *out_status
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_MNEMONIC_AS_STRING
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_MNEMONIC_AS_STRING
+RustBuffer uniffi_lightspark_crypto_fn_method_mnemonic_as_string(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CLONE_SEED
+void* uniffi_lightspark_crypto_fn_clone_seed(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FREE_SEED
+void uniffi_lightspark_crypto_fn_free_seed(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_SEED_FROM_MNEMONIC
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_SEED_FROM_MNEMONIC
+void* uniffi_lightspark_crypto_fn_constructor_seed_from_mnemonic(void* mnemonic, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_SEED_NEW
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_CONSTRUCTOR_SEED_NEW
+void* uniffi_lightspark_crypto_fn_constructor_seed_new(RustBuffer seed, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_SEED_AS_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_METHOD_SEED_AS_BYTES
+RustBuffer uniffi_lightspark_crypto_fn_method_seed_as_bytes(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_INIT_CALLBACK_VTABLE_VALIDATION
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_INIT_CALLBACK_VTABLE_VALIDATION
+void uniffi_lightspark_crypto_fn_init_callback_vtable_validation(UniffiVTableCallbackInterfaceValidation* vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_DECRYPT_ECIES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_DECRYPT_ECIES
+RustBuffer uniffi_lightspark_crypto_fn_func_decrypt_ecies(RustBuffer cipher_text, RustBuffer private_key_bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_DERIVE_AND_TWEAK_PUBKEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_DERIVE_AND_TWEAK_PUBKEY
+RustBuffer uniffi_lightspark_crypto_fn_func_derive_and_tweak_pubkey(RustBuffer pubkey, RustBuffer derivation_path, RustBuffer add_tweak, RustBuffer mul_tweak, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_ENCRYPT_ECIES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_ENCRYPT_ECIES
+RustBuffer uniffi_lightspark_crypto_fn_func_encrypt_ecies(RustBuffer msg, RustBuffer public_key_bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_GENERATE_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_GENERATE_KEYPAIR
+void* uniffi_lightspark_crypto_fn_func_generate_keypair(RustCallStatus *out_status
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_GENERATE_MULTISIG_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_GENERATE_MULTISIG_ADDRESS
+RustBuffer uniffi_lightspark_crypto_fn_func_generate_multisig_address(RustBuffer network, RustBuffer pk1, RustBuffer pk2, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_HANDLE_REMOTE_SIGNING_WEBHOOK_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_HANDLE_REMOTE_SIGNING_WEBHOOK_EVENT
+RustBuffer uniffi_lightspark_crypto_fn_func_handle_remote_signing_webhook_event(RustBuffer webhook_data, RustBuffer webhook_signature, RustBuffer webhook_secret, RustBuffer master_seed_bytes, uint64_t validation, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_SIGN_ECDSA
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_SIGN_ECDSA
+RustBuffer uniffi_lightspark_crypto_fn_func_sign_ecdsa(RustBuffer msg, RustBuffer private_key_bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_SIGN_TRANSACTIONS
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_SIGN_TRANSACTIONS
+RustBuffer uniffi_lightspark_crypto_fn_func_sign_transactions(RustBuffer master_seed, RustBuffer data, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_VERIFY_ECDSA
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_FN_FUNC_VERIFY_ECDSA
+int8_t uniffi_lightspark_crypto_fn_func_verify_ecdsa(RustBuffer msg, RustBuffer signature_bytes, RustBuffer public_key_bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_ALLOC
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_ALLOC
+RustBuffer ffi_lightspark_crypto_rustbuffer_alloc(uint64_t size, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_FROM_BYTES
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_FROM_BYTES
+RustBuffer ffi_lightspark_crypto_rustbuffer_from_bytes(ForeignBytes bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_FREE
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_FREE
+void ffi_lightspark_crypto_rustbuffer_free(RustBuffer buf, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_RESERVE
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUSTBUFFER_RESERVE
+RustBuffer ffi_lightspark_crypto_rustbuffer_reserve(RustBuffer buf, uint64_t additional, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U8
+void ffi_lightspark_crypto_rust_future_poll_u8(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U8
+void ffi_lightspark_crypto_rust_future_cancel_u8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U8
+void ffi_lightspark_crypto_rust_future_free_u8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U8
+uint8_t ffi_lightspark_crypto_rust_future_complete_u8(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I8
+void ffi_lightspark_crypto_rust_future_poll_i8(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I8
+void ffi_lightspark_crypto_rust_future_cancel_i8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I8
+void ffi_lightspark_crypto_rust_future_free_i8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I8
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I8
+int8_t ffi_lightspark_crypto_rust_future_complete_i8(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U16
+void ffi_lightspark_crypto_rust_future_poll_u16(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U16
+void ffi_lightspark_crypto_rust_future_cancel_u16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U16
+void ffi_lightspark_crypto_rust_future_free_u16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U16
+uint16_t ffi_lightspark_crypto_rust_future_complete_u16(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I16
+void ffi_lightspark_crypto_rust_future_poll_i16(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I16
+void ffi_lightspark_crypto_rust_future_cancel_i16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I16
+void ffi_lightspark_crypto_rust_future_free_i16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I16
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I16
+int16_t ffi_lightspark_crypto_rust_future_complete_i16(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U32
+void ffi_lightspark_crypto_rust_future_poll_u32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U32
+void ffi_lightspark_crypto_rust_future_cancel_u32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U32
+void ffi_lightspark_crypto_rust_future_free_u32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U32
+uint32_t ffi_lightspark_crypto_rust_future_complete_u32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I32
+void ffi_lightspark_crypto_rust_future_poll_i32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I32
+void ffi_lightspark_crypto_rust_future_cancel_i32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I32
+void ffi_lightspark_crypto_rust_future_free_i32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I32
+int32_t ffi_lightspark_crypto_rust_future_complete_i32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_U64
+void ffi_lightspark_crypto_rust_future_poll_u64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_U64
+void ffi_lightspark_crypto_rust_future_cancel_u64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_U64
+void ffi_lightspark_crypto_rust_future_free_u64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_U64
+uint64_t ffi_lightspark_crypto_rust_future_complete_u64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_I64
+void ffi_lightspark_crypto_rust_future_poll_i64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_I64
+void ffi_lightspark_crypto_rust_future_cancel_i64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_I64
+void ffi_lightspark_crypto_rust_future_free_i64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_I64
+int64_t ffi_lightspark_crypto_rust_future_complete_i64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_F32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_F32
+void ffi_lightspark_crypto_rust_future_poll_f32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_F32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_F32
+void ffi_lightspark_crypto_rust_future_cancel_f32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_F32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_F32
+void ffi_lightspark_crypto_rust_future_free_f32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_F32
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_F32
+float ffi_lightspark_crypto_rust_future_complete_f32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_F64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_F64
+void ffi_lightspark_crypto_rust_future_poll_f64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_F64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_F64
+void ffi_lightspark_crypto_rust_future_cancel_f64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_F64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_F64
+void ffi_lightspark_crypto_rust_future_free_f64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_F64
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_F64
+double ffi_lightspark_crypto_rust_future_complete_f64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_POINTER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_POINTER
+void ffi_lightspark_crypto_rust_future_poll_pointer(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_POINTER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_POINTER
+void ffi_lightspark_crypto_rust_future_cancel_pointer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_POINTER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_POINTER
+void ffi_lightspark_crypto_rust_future_free_pointer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_POINTER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_POINTER
+void* ffi_lightspark_crypto_rust_future_complete_pointer(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_RUST_BUFFER
+void ffi_lightspark_crypto_rust_future_poll_rust_buffer(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_RUST_BUFFER
+void ffi_lightspark_crypto_rust_future_cancel_rust_buffer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_RUST_BUFFER
+void ffi_lightspark_crypto_rust_future_free_rust_buffer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_RUST_BUFFER
+RustBuffer ffi_lightspark_crypto_rust_future_complete_rust_buffer(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_VOID
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_POLL_VOID
+void ffi_lightspark_crypto_rust_future_poll_void(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_VOID
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_CANCEL_VOID
+void ffi_lightspark_crypto_rust_future_cancel_void(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_VOID
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_FREE_VOID
+void ffi_lightspark_crypto_rust_future_free_void(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_VOID
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_RUST_FUTURE_COMPLETE_VOID
+void ffi_lightspark_crypto_rust_future_complete_void(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_DECRYPT_ECIES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_DECRYPT_ECIES
+uint16_t uniffi_lightspark_crypto_checksum_func_decrypt_ecies(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_DERIVE_AND_TWEAK_PUBKEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_DERIVE_AND_TWEAK_PUBKEY
+uint16_t uniffi_lightspark_crypto_checksum_func_derive_and_tweak_pubkey(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_ENCRYPT_ECIES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_ENCRYPT_ECIES
+uint16_t uniffi_lightspark_crypto_checksum_func_encrypt_ecies(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_GENERATE_KEYPAIR
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_GENERATE_KEYPAIR
+uint16_t uniffi_lightspark_crypto_checksum_func_generate_keypair(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_GENERATE_MULTISIG_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_GENERATE_MULTISIG_ADDRESS
+uint16_t uniffi_lightspark_crypto_checksum_func_generate_multisig_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_HANDLE_REMOTE_SIGNING_WEBHOOK_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_HANDLE_REMOTE_SIGNING_WEBHOOK_EVENT
+uint16_t uniffi_lightspark_crypto_checksum_func_handle_remote_signing_webhook_event(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_SIGN_ECDSA
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_SIGN_ECDSA
+uint16_t uniffi_lightspark_crypto_checksum_func_sign_ecdsa(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_SIGN_TRANSACTIONS
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_SIGN_TRANSACTIONS
+uint16_t uniffi_lightspark_crypto_checksum_func_sign_transactions(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_VERIFY_ECDSA
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_FUNC_VERIFY_ECDSA
+uint16_t uniffi_lightspark_crypto_checksum_func_verify_ecdsa(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_INVOICESIGNATURE_GET_RECOVERY_ID
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_INVOICESIGNATURE_GET_RECOVERY_ID
+uint16_t uniffi_lightspark_crypto_checksum_method_invoicesignature_get_recovery_id(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_INVOICESIGNATURE_GET_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_INVOICESIGNATURE_GET_SIGNATURE
+uint16_t uniffi_lightspark_crypto_checksum_method_invoicesignature_get_signature(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_KEYPAIR_GET_PRIVATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_KEYPAIR_GET_PRIVATE_KEY
+uint16_t uniffi_lightspark_crypto_checksum_method_keypair_get_private_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_KEYPAIR_GET_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_KEYPAIR_GET_PUBLIC_KEY
+uint16_t uniffi_lightspark_crypto_checksum_method_keypair_get_public_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_KEY_AND_SIGN
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_KEY_AND_SIGN
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_key_and_sign(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PRIVATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PRIVATE_KEY
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_private_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY_HEX
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_DERIVE_PUBLIC_KEY_HEX
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_derive_public_key_hex(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_ECDH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_ECDH
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_ecdh(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_HASH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_HASH
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_hash(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_NONCE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GENERATE_PREIMAGE_NONCE
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_generate_preimage_nonce(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GET_MASTER_PUBLIC_KEY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GET_MASTER_PUBLIC_KEY
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_master_public_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GET_PER_COMMITMENT_POINT
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_GET_PER_COMMITMENT_POINT
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_get_per_commitment_point(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_RELEASE_PER_COMMITMENT_SECRET
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_RELEASE_PER_COMMITMENT_SECRET
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_release_per_commitment_secret(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE_HASH
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_LIGHTSPARKSIGNER_SIGN_INVOICE_HASH
+uint16_t uniffi_lightspark_crypto_checksum_method_lightsparksigner_sign_invoice_hash(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_MNEMONIC_AS_STRING
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_MNEMONIC_AS_STRING
+uint16_t uniffi_lightspark_crypto_checksum_method_mnemonic_as_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_SEED_AS_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_SEED_AS_BYTES
+uint16_t uniffi_lightspark_crypto_checksum_method_seed_as_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_LIGHTSPARKSIGNER_FROM_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_LIGHTSPARKSIGNER_FROM_BYTES
+uint16_t uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_from_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_LIGHTSPARKSIGNER_NEW
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_LIGHTSPARKSIGNER_NEW
+uint16_t uniffi_lightspark_crypto_checksum_constructor_lightsparksigner_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_FROM_ENTROPY
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_FROM_ENTROPY
+uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_entropy(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_FROM_PHRASE
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_FROM_PHRASE
+uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_from_phrase(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_RANDOM
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_MNEMONIC_RANDOM
+uint16_t uniffi_lightspark_crypto_checksum_constructor_mnemonic_random(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_SEED_FROM_MNEMONIC
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_SEED_FROM_MNEMONIC
+uint16_t uniffi_lightspark_crypto_checksum_constructor_seed_from_mnemonic(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_SEED_NEW
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_CONSTRUCTOR_SEED_NEW
+uint16_t uniffi_lightspark_crypto_checksum_constructor_seed_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_VALIDATION_SHOULD_SIGN
+#define UNIFFI_FFIDEF_UNIFFI_LIGHTSPARK_CRYPTO_CHECKSUM_METHOD_VALIDATION_SHOULD_SIGN
+uint16_t uniffi_lightspark_crypto_checksum_method_validation_should_sign(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_UNIFFI_CONTRACT_VERSION
+#define UNIFFI_FFIDEF_FFI_LIGHTSPARK_CRYPTO_UNIFFI_CONTRACT_VERSION
+uint32_t ffi_lightspark_crypto_uniffi_contract_version(void
+    
+);
+#endif
+
+ void lightspark_crypto_cgo_dispatchCallbackInterfaceValidationMethod0(uint64_t uniffi_handle, RustBuffer webhook, int8_t* uniffi_out_return, RustCallStatus* callStatus );
+ void lightspark_crypto_cgo_dispatchCallbackInterfaceValidationFree(uint64_t handle);

@@ -22,8 +22,8 @@ const (
 )
 
 func GetMnemonicSeedPhrase(entropy []byte) ([]string, error) {
-	mnemonic, err := internal.MnemonicFromEntropy(entropy)
-	if err != nil {
+	mnemonic, uniffiErr := internal.MnemonicFromEntropy(entropy)
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 	defer mnemonic.Destroy()
@@ -32,8 +32,8 @@ func GetMnemonicSeedPhrase(entropy []byte) ([]string, error) {
 }
 
 func MnemonicToSeed(mnemonic []string) ([]byte, error) {
-	mnemonicObj, err := internal.MnemonicFromPhrase(strings.Join(mnemonic, " "))
-	if err != nil {
+	mnemonicObj, uniffiErr := internal.MnemonicFromPhrase(strings.Join(mnemonic, " "))
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 	defer mnemonicObj.Destroy()
@@ -51,7 +51,11 @@ func Ecdh(seedBytes []byte, network BitcoinNetwork, otherPubKey []byte) ([]byte,
 	}
 	defer signer.Destroy()
 
-	return signer.Ecdh(otherPubKey)
+	ecdhResult, uniffiErr := signer.Ecdh(otherPubKey)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return ecdhResult, nil
 }
 
 func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
@@ -61,7 +65,11 @@ func DerivePublicKey(seedBytes []byte, network BitcoinNetwork, derivationPath st
 	}
 	defer signer.Destroy()
 
-	return signer.DerivePublicKey(derivationPath)
+	publicKey, uniffiErr := signer.DerivePublicKey(derivationPath)
+	if err := uniffiErr.AsError(); err != nil {
+		return "", err
+	}
+	return publicKey, nil
 }
 
 func DerivePrivateKey(seedBytes []byte, network BitcoinNetwork, derivationPath string) (string, error) {
@@ -71,7 +79,11 @@ func DerivePrivateKey(seedBytes []byte, network BitcoinNetwork, derivationPath s
 	}
 	defer signer.Destroy()
 
-	return signer.DerivePrivateKey(derivationPath)
+	privateKey, uniffiErr := signer.DerivePrivateKey(derivationPath)
+	if err := uniffiErr.AsError(); err != nil {
+		return "", err
+	}
+	return privateKey, nil
 }
 
 func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, derivationPath string, isRaw bool, addTweak *[]byte, multTweak *[]byte) ([]byte, error) {
@@ -81,8 +93,8 @@ func DeriveKeyAndSign(seedBytes []byte, network BitcoinNetwork, message []byte, 
 	}
 	defer signer.Destroy()
 
-	signature, err := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
-	if err != nil {
+	signature, uniffiErr := signer.DeriveKeyAndSign(message, derivationPath, isRaw, addTweak, multTweak)
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 
@@ -101,8 +113,8 @@ func SignInvoice(seedBytes []byte, network BitcoinNetwork, unsignedInvoice strin
 	}
 	defer signer.Destroy()
 
-	signature, err := signer.SignInvoice(unsignedInvoice)
-	if err != nil {
+	signature, uniffiErr := signer.SignInvoice(unsignedInvoice)
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 
@@ -121,8 +133,8 @@ func SignInvoiceHash(seedBytes []byte, network BitcoinNetwork, unsignedInvoice [
 	}
 	defer signer.Destroy()
 
-	signature, err := signer.SignInvoiceHash(unsignedInvoice)
-	if err != nil {
+	signature, uniffiErr := signer.SignInvoiceHash(unsignedInvoice)
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +153,11 @@ func GetPerCommitmentPoint(seedBytes []byte, network BitcoinNetwork, derivationP
 	}
 	defer signer.Destroy()
 
-	return signer.GetPerCommitmentPoint(derivationPath, perCommitmentPointIdx)
+	perCommitmentPoint, uniffiErr := signer.GetPerCommitmentPoint(derivationPath, perCommitmentPointIdx)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return perCommitmentPoint, nil
 }
 
 func ReleasePerCommitmentSecret(seedBytes []byte, network BitcoinNetwork, derivationPath string, perCommitmentPointIdx uint64) ([]byte, error) {
@@ -151,7 +167,11 @@ func ReleasePerCommitmentSecret(seedBytes []byte, network BitcoinNetwork, deriva
 	}
 	defer signer.Destroy()
 
-	return signer.ReleasePerCommitmentSecret(derivationPath, perCommitmentPointIdx)
+	commitmentSecret, uniffiErr := signer.ReleasePerCommitmentSecret(derivationPath, perCommitmentPointIdx)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return commitmentSecret, nil
 }
 
 func GeneratePreimageNonce(seedBytes []byte) ([]byte, error) {
@@ -173,7 +193,11 @@ func GeneratePreimage(seedBytes []byte, nonce []byte) ([]byte, error) {
 	}
 	defer signer.Destroy()
 
-	return signer.GeneratePreimage(nonce)
+	preimage, uniffiErr := signer.GeneratePreimage(nonce)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return preimage, nil
 }
 
 func GeneratePreimageHash(seedBytes []byte, nonce []byte) ([]byte, error) {
@@ -183,33 +207,61 @@ func GeneratePreimageHash(seedBytes []byte, nonce []byte) ([]byte, error) {
 	}
 	defer signer.Destroy()
 
-	return signer.GeneratePreimageHash(nonce)
+	preimageHash, uniffiErr := signer.GeneratePreimageHash(nonce)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return preimageHash, nil
 }
 
 func SignEcdsa(message []byte, privateKey []byte) ([]byte, error) {
-	return internal.SignEcdsa(message, privateKey)
+	signature, uniffiErr := internal.SignEcdsa(message, privateKey)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return signature, nil
 }
 
 func VerifyEcdsa(message []byte, signature []byte, publicKey []byte) (bool, error) {
-	return internal.VerifyEcdsa(message, signature, publicKey)
+	verified, uniffiErr := internal.VerifyEcdsa(message, signature, publicKey)
+	if err := uniffiErr.AsError(); err != nil {
+		return false, err
+	}
+	return verified, nil
 }
 
 func EncryptEcies(message []byte, publicKey []byte) ([]byte, error) {
-	return internal.EncryptEcies(message, publicKey)
+	encrypted, uniffiErr := internal.EncryptEcies(message, publicKey)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return encrypted, nil
 }
 
 func DecryptEcies(message []byte, privateKey []byte) ([]byte, error) {
-	return internal.DecryptEcies(message, privateKey)
+	decrypted, uniffiErr := internal.DecryptEcies(message, privateKey)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return decrypted, nil
 }
 
 func GenerateMultiSigAddress(network BitcoinNetwork, publicKey1 []byte, publicKey2 []byte) (string, error) {
 	ffiNetwork := toInternalNetwork(network)
 
-	return internal.GenerateMultisigAddress(ffiNetwork, publicKey1, publicKey2)
+	multisigAddress, uniffiErr := internal.GenerateMultisigAddress(ffiNetwork, publicKey1, publicKey2)
+	if err := uniffiErr.AsError(); err != nil {
+		return "", err
+	}
+	return multisigAddress, nil
 }
 
 func DeriveAndTweakPubkey(pubkey string, derivationPath string, addTweak *[]uint8, mulTweak *[]uint8) ([]uint8, error) {
-	return internal.DeriveAndTweakPubkey(pubkey, derivationPath, addTweak, mulTweak)
+	derivedPubkey, uniffiErr := internal.DeriveAndTweakPubkey(pubkey, derivationPath, addTweak, mulTweak)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return derivedPubkey, nil
 }
 
 func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.LightsparkSigner, error) {
@@ -218,7 +270,11 @@ func getLightsparkSigner(seedBytes []byte, network BitcoinNetwork) (*internal.Li
 
 	ffiNetwork := toInternalNetwork(network)
 
-	return internal.NewLightsparkSigner(seed, ffiNetwork)
+	signer, uniffiErr := internal.NewLightsparkSigner(seed, ffiNetwork)
+	if err := uniffiErr.AsError(); err != nil {
+		return nil, err
+	}
+	return signer, nil
 }
 
 type Pair struct {
@@ -239,8 +295,8 @@ type FundsRecoveryResponse struct{
 func SignTransactions (masterSeed string, data string, network BitcoinNetwork) (*FundsRecoveryResponse, error) {
 	ffiNetwork := toInternalNetwork(network)
 
-	resp, err := internal.SignTransactions(masterSeed, data, ffiNetwork)
-	if err != nil {
+	resp, uniffiErr := internal.SignTransactions(masterSeed, data, ffiNetwork)
+	if err := uniffiErr.AsError(); err != nil {
 		return nil, err
 	}
 
