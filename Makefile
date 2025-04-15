@@ -22,16 +22,18 @@ code-gen-kotlin:
 	sed -i '' 's/package uniffi.lightspark_crypto/package com.lightspark.sdk.crypto.internal/g' lightspark-crypto-kotlin/uniffi/lightspark_crypto/lightspark_crypto.kt
 
 build-darwin-amd64:
-	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop. If you comment out the CC= line instead, this will work.
-	# cargo build --profile release-smaller --target x86_64-apple-darwin
+	# Unset Android-specific environment variables for macOS build
+	unset CC AR CFLAGS && \
+	cargo build --profile release-smaller --target x86_64-apple-darwin
 
 build-darwin-arm64:
-	# FIXME(mhr): This currently doesn't work because of the compiler flags defined below for Android, so just noop. If you comment out the CC= line instead, this will work.
-	# cargo build --profile release-smaller --target aarch64-apple-darwin
+	# Unset Android-specific environment variables for macOS build
+	unset CC AR CFLAGS && \
+	cargo build --profile release-smaller --target aarch64-apple-darwin
 
 code-gen-go:
 	mkdir -p lightspark-crypto-go/internal
-	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.2.1+v0.25.0
+	cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.3.0+v0.28.3
 	uniffi-bindgen-go src/lightspark_crypto.udl --out-dir lightspark-crypto-go
 	mv lightspark-crypto-go/lightspark_crypto/* lightspark-crypto-go/internal
 	sed -i '' 's/package lightspark_crypto/package internal/g' lightspark-crypto-go/internal/lightspark_crypto.go
