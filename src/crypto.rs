@@ -145,6 +145,7 @@ pub fn generate_multisig_address(
         Network::Bitcoin => bitcoin_bech32::constants::Network::Bitcoin,
         Network::Testnet => bitcoin_bech32::constants::Network::Testnet,
         Network::Regtest => bitcoin_bech32::constants::Network::Regtest,
+        Network::Signet => bitcoin_bech32::constants::Network::Signet,
     };
     _generate_multisig_address(network, &pk1_obj, &pk2_obj)
 }

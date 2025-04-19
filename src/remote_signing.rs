@@ -9,6 +9,7 @@ use lightspark_remote_signing::{
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsError, JsValue};
 
+#[derive(Debug)]
 pub struct RemoteSigningResponse {
     pub query: String,
     pub variables: String,
@@ -95,6 +96,7 @@ pub fn handle_remote_signing_webhook_event(
         Some("REGTEST") => Network::Regtest,
         Some("MAINNET") => Network::Bitcoin,
         Some("TESTNET") => Network::Testnet,
+        Some("SIGNET") => Network::Signet,
         _ => return Err(RemoteSigningError::WebhookParsingError),
     };
 
@@ -176,11 +178,24 @@ mod test {
 
     #[test]
     fn test_handle_remote_signing() {
-        let webhook_data_string = "{\"event_type\": \"REMOTE_SIGNING\", \"event_id\": \"5053dbd8c5b0453494f1c14e01da69cd\", \"timestamp\": \"2023-09-18T23:50:15.355603+00:00\", \"entity_id\": \"node_with_server_signing:018a9635-3673-88df-0000-827f23051b19\", \"data\": {\"sub_event_type\": \"ECDH\", \"bitcoin_network\": \"REGTEST\", \"peer_public_key\": \"03173d97d0973d596716c8cd14066e20e27f6866ab214fd04d160301615de78f72\"}}";
-        let sig = "a64c69f1266bc1dc1322c3f40eba7ba2d536c714774a4fc04f0938609482f5d9";
+        let webhook_data_string = r###"
+        {
+            "event_type": "REMOTE_SIGNING",
+            "event_id": "5053dbd8c5b0453494f1c14e01da69cd",
+            "timestamp": "2023-09-18T23:50:15.355603+00:00",
+            "entity_id": "node_with_server_signing:018a9635-3673-88df-0000-827f23051b19", 
+            "data": {
+                "sub_event_type": "DERIVE_KEY_AND_SIGN", 
+                "bitcoin_network": "SIGNET",
+                "signing_jobs": [{"id": "0195813b-ea49-4954-0000-68488c717815", "derivation_path": "m/3/913740152/0", "message": "54ce8d370b5bd43173d19ec535f86b4f7789992c414a549e5055c8ab51210881"}]
+            }
+        }
+        "###;
+        let sig = "cedd8170bb431c25cf49de32fedec94bf9051a782c34f02860927e97602dbe99";
         let sec = "39kyJO140v7fYkwHnR7jz8Y3UphqVeNYQk44Xx049ws";
         let seed = "1a6deac8f74fb2e332677e3f4833b5e962f80d153fb368b8ee322a9caca4113d56cccd88f1c6a74e152669d8cd373fee2f27e3645d80de27640177a8c71395f8";
         let master_seed_bytes = hex::decode(seed).unwrap();
+
         let validator = Box::new(PositiveValidator);
         let response = handle_remote_signing_webhook_event(
             webhook_data_string.as_bytes().to_vec(),

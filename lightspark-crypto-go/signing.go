@@ -19,6 +19,7 @@ const (
 	Mainnet BitcoinNetwork = 1
 	Testnet BitcoinNetwork = 2
 	Regtest BitcoinNetwork = 3
+	Signet  BitcoinNetwork = 4
 )
 
 func GetMnemonicSeedPhrase(entropy []byte) ([]string, error) {
@@ -282,17 +283,17 @@ type Pair struct {
 	Second string
 }
 
-type FundsRecoveryResponse struct{
-	CommitmentTx string
-	SweepTx string
-	HtlcInboundTx []Pair
-	HtlcOutboundTx []Pair
-	CounterpartySweepTx string
-	CounterpartyHtlcInboundTx []string
+type FundsRecoveryResponse struct {
+	CommitmentTx               string
+	SweepTx                    string
+	HtlcInboundTx              []Pair
+	HtlcOutboundTx             []Pair
+	CounterpartySweepTx        string
+	CounterpartyHtlcInboundTx  []string
 	CounterpartyHtlcOutboundTx []string
 }
 
-func SignTransactions (masterSeed string, data string, network BitcoinNetwork) (*FundsRecoveryResponse, error) {
+func SignTransactions(masterSeed string, data string, network BitcoinNetwork) (*FundsRecoveryResponse, error) {
 	ffiNetwork := toInternalNetwork(network)
 
 	resp, uniffiErr := internal.SignTransactions(masterSeed, data, ffiNetwork)
@@ -301,12 +302,12 @@ func SignTransactions (masterSeed string, data string, network BitcoinNetwork) (
 	}
 
 	return &FundsRecoveryResponse{
-		CommitmentTx: resp.CommitmentTx,
-		SweepTx: resp.SweepTx,
-		HtlcInboundTx: toPairArray(resp.HtlcInboundTx),
-		HtlcOutboundTx: toPairArray(resp.HtlcOutboundTx),
-		CounterpartySweepTx: resp.CounterpartySweepTx,
-		CounterpartyHtlcInboundTx: resp.CounterpartyHtlcInboundTx,
+		CommitmentTx:               resp.CommitmentTx,
+		SweepTx:                    resp.SweepTx,
+		HtlcInboundTx:              toPairArray(resp.HtlcInboundTx),
+		HtlcOutboundTx:             toPairArray(resp.HtlcOutboundTx),
+		CounterpartySweepTx:        resp.CounterpartySweepTx,
+		CounterpartyHtlcInboundTx:  resp.CounterpartyHtlcInboundTx,
 		CounterpartyHtlcOutboundTx: resp.CounterpartyHtlcOutboundTx,
 	}, nil
 
@@ -320,6 +321,8 @@ func toInternalNetwork(network BitcoinNetwork) internal.Network {
 		return internal.NetworkTestnet
 	case Regtest:
 		return internal.NetworkRegtest
+	case Signet:
+		return internal.NetworkSignet
 	default:
 		return internal.NetworkBitcoin
 	}

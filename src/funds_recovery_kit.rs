@@ -787,6 +787,7 @@ pub fn sign_transactions(
         signer::Network::Bitcoin => bitcoin::Network::Bitcoin,
         signer::Network::Testnet => bitcoin::Network::Testnet,
         signer::Network::Regtest => bitcoin::Network::Regtest,
+        signer::Network::Signet => bitcoin::Network::Signet,
     };
     // For now, do not expose implementation errors as the kit should just be serialized and sent. If this fails we will have to look into it further.
     sign_transactions_impl(master_seed, data, network).map_err(|_| FundsRecoveryKitError::Error { message: "Generating the funds recovery kit failed. The kit should only be serialized and sent without modification.".to_string() })

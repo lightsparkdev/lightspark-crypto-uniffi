@@ -2166,6 +2166,7 @@ const (
 	NetworkBitcoin Network = 1
 	NetworkTestnet Network = 2
 	NetworkRegtest Network = 3
+	NetworkSignet  Network = 4
 )
 
 type FfiConverterNetwork struct{}

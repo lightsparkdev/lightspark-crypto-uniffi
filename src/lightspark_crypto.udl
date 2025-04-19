@@ -102,6 +102,7 @@ enum Network {
     "Bitcoin",
     "Testnet",
     "Regtest",
+    "Signet"
 };
 
 interface Mnemonic {

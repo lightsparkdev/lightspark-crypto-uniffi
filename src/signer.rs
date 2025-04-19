@@ -28,6 +28,7 @@ pub enum Network {
     Bitcoin,
     Testnet,
     Regtest,
+    Signet
 }
 
 impl fmt::Display for LightsparkSignerError {
@@ -137,6 +138,7 @@ impl LightsparkSigner {
             Network::Bitcoin => bitcoin::Network::Bitcoin,
             Network::Testnet => bitcoin::Network::Testnet,
             Network::Regtest => bitcoin::Network::Regtest,
+            Network::Signet => bitcoin::Network::Signet,
         };
         let master_private_key = Xpriv::new_master(network, seed.as_bytes().as_slice())
             .map_err(|_| LightsparkSignerError::KeyDerivationError)?;
