@@ -101,17 +101,21 @@ pub fn handle_remote_signing_webhook_event(
     let signer = LightsparkSigner::new(&seed, network)
         .map_err(|_| RemoteSigningError::SignerCreationError)?;
     let handler = Handler::new(signer, validation);
+    
+    // FIXED: Use and_then to handle the nested Result from serde_json
     handler
         .handle_remote_signing_webhook_msg(&webhook_event)
-        .map_err(|_| RemoteSigningError::RemoteSigningHandlerError)
-        .map(|response| match response {
-            None => None,
-            Some(response) => Some(RemoteSigningResponse {
+        .map_err(|_| RemoteSigningError::RemoteSigningHandlerError)?
+        .map(|response| {
+            let variables_json = serde_json::to_string(&response.variables)
+                .map_err(|_| RemoteSigningError::RemoteSigningHandlerError)?;
+            
+            Ok(RemoteSigningResponse {
                 query: response.query,
-                variables: serde_json::to_string(&response.variables)
-                    .expect("serde value to json should not fail"),
-            }),
+                variables: variables_json,
+            })
         })
+        .transpose()
 }
 
 #[wasm_bindgen]
@@ -151,6 +155,8 @@ pub fn wasm_handle_remote_signing_webhook_event(
 ) -> Result<Option<RemoteSigningResponseWasm>, RemoteSigningError> {
     let validation = (*validation).clone();
     let validator = WasmValidator::new(WasmValidation { obj: validation });
+    
+    // FIXED: Propagate the inner result and map the response safely
     handle_remote_signing_webhook_event(
         webhook_data,
         webhook_signature,
@@ -158,13 +164,11 @@ pub fn wasm_handle_remote_signing_webhook_event(
         master_seed_bytes,
         Box::new(validator),
     )
-    .map(|response| match response {
-        None => None,
-        Some(response) => Some(RemoteSigningResponseWasm {
-            query: response.query,
-            variables: serde_json::to_string(&response.variables)
-                .expect("serde value to json should not fail"),
-        }),
+    .map(|response| {
+        response.map(|r| RemoteSigningResponseWasm {
+            query: r.query,
+            variables: r.variables, // No second serde_json call needed here!
+        })
     })
 }
 
